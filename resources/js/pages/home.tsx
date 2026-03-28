@@ -23,6 +23,7 @@ import {
     CheckSquare,
     Moon,
     Sun,
+    Square,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { DayPanelContent } from '@/components/day-panel-content';
@@ -215,15 +216,15 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
                                             'yyyy-MM-dd',
                                         );
                                         const data = calendar[dayKey];
+
+                                        const tasks = data?.tasks || [];
+
                                         const hasNotes = !!data?.notes;
-                                        const hasTasks =
-                                            data?.tasks?.length > 0;
-                                        const totaltasks =
-                                            data?.tasks?.length || 0;
+                                        const hasTasks = tasks.length > 0;
+                                        const totaltasks = tasks.length || 0;
                                         const donetasks =
-                                            data?.tasks?.filter(
-                                                (t) => t.is_finished,
-                                            ).length || 0;
+                                            tasks.filter((t) => t.is_finished)
+                                                .length || 0;
                                         const isSelected =
                                             selectedDate &&
                                             format(
@@ -234,6 +235,10 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
                                             day,
                                             monthStart,
                                         );
+
+                                        const finishedAllTasks =
+                                            totaltasks > 0 &&
+                                            donetasks === totaltasks;
 
                                         return (
                                             <div
@@ -288,32 +293,43 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
 
                                                 <div className="mt-2.5 flex w-full flex-col space-y-2 px-1">
                                                     {hasTasks &&
-                                                        data?.tasks.map(
-                                                            (task: Task) => (
-                                                                <div
-                                                                    key={
-                                                                        task.id
-                                                                    }
-                                                                    className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground"
-                                                                >
-                                                                    <AlignLeft className="h-3 w-3 shrink-0" />
-                                                                    <span className="truncate opacity-80">
-                                                                        {
-                                                                            task.description
+                                                        tasks
+                                                            .slice(0, 3)
+                                                            .map(
+                                                                (
+                                                                    task: Task,
+                                                                ) => (
+                                                                    <div
+                                                                        key={
+                                                                            task.id
                                                                         }
-                                                                    </span>
-                                                                </div>
-                                                            ),
-                                                        )}
+                                                                        className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground"
+                                                                    >
+                                                                        {task.is_finished ? (
+                                                                            <CheckSquare className="h-3 w-3 shrink-0" />
+                                                                        ) : (
+                                                                            <Square className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                                                        )}
+                                                                        <span className="truncate opacity-80">
+                                                                            {task
+                                                                                .description
+                                                                                .length >
+                                                                            15
+                                                                                ? `${task.description.slice(0, 23)}...`
+                                                                                : task.description}
+                                                                        </span>
+                                                                    </div>
+                                                                ),
+                                                            )}
 
-                                                    {hasNotes && (
+                                                    {/* {hasNotes && (
                                                         <div className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground">
                                                             <AlignLeft className="h-3 w-3 shrink-0" />
                                                             <span className="truncate opacity-80">
                                                                 {data.notes}
                                                             </span>
                                                         </div>
-                                                    )}
+                                                    )} */}
 
                                                     {!hasTasks &&
                                                         !hasNotes &&

@@ -15,14 +15,14 @@ class Task extends Model
     protected $primaryKey = 'id';
 
     protected $fillable = [
-        'user_id',
         'description',
         'date',
-        'is_finished'
+        'is_finished',
+        'calendar_day_id',
     ];
 
-    public function user(): BelongsTo
+    public function calendarDay(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(CalendarDay::class);
     }
 }

@@ -14,5 +14,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Task routes
     Route::resource('tasks', \App\Http\Controllers\TaskController::class)
          ->except(['create', 'edit', 'show']); // Keep only index, store, update, destroy
+
+    Route::resource('calendar-days', \App\Http\Controllers\CalendarDayController::class)
+        ->except(['create', 'edit', 'show']); // Keep only index, store, update, destroy
 });
 require __DIR__.'/settings.php';

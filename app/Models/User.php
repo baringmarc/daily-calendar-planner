@@ -33,8 +33,8 @@ class User extends Authenticatable
         ];
     }
 
-    public function tasks(): HasMany
+    public function calendarDays(): HasMany
     {
-        return $this->hasMany(Task::class);
+        return $this->hasMany(CalendarDay::class);
     }
 }

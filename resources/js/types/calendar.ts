@@ -4,23 +4,20 @@ export type Task = {
     is_finished: boolean;
 };
 
-export type DayData = {
-    notes: string;
-    tasks: Task[];
+export type CalendarDay = {
+    id: string;
+    note: string;
 };
 
-export type Note = {
-    id: string;
-    date: string;
-    text: string;
+export type DayData = {
+    calendar_day: CalendarDay;
+    tasks: Task[];
 };
 
 export type CalendarData = Record<
     string,
     {
-        notes: string;
+        calendar_day: CalendarDay;
         tasks: Task[];
     }
 >;
-
-export type Store = Record<string, DayData>;

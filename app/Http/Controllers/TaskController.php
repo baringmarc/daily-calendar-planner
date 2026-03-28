@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
+use App\Services\TaskService;
 
 class TaskController extends Controller
 {
@@ -29,7 +30,12 @@ class TaskController extends Controller
      */
     public function store(StoreTaskRequest $request)
     {
-        $task = $request->user()->tasks()->create($request->validated());
+        $taskService = new TaskService();
+        
+        $data = $request->validated();
+        $data['user_id'] = auth()->id();
+
+        $task = $taskService->create($data);
 
         return response()->json($task, 201);
     }
@@ -65,13 +71,8 @@ class TaskController extends Controller
      */
     public function destroy(Task $task)
     {
-        // Ensure the task belongs to the authenticated user
-        if ($task->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
         $task->delete();
-
+        
         return response()->json(['message' => 'Task deleted successfully'], 200);
     }
 }

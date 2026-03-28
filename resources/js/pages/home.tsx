@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { home } from '@/routes';
-import type { DayData, Store, CalendarData, Task } from '@/types';
+import type { DayData, Store, CalendarData, Task, User } from '@/types';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     format,
@@ -44,11 +44,6 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-    // "Database" simulated via localStorage
-    // const [store, setStore] = useState<Store>(() => {
-    //     const saved = localStorage.getItem('calen-notes-db');
-    //     return saved ? JSON.parse(saved) : {};
-    // });
     const [calendar, setCalendar] = useState<CalendarData>(calendarData || {});
 
     useEffect(() => {

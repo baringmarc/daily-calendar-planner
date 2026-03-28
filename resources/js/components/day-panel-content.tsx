@@ -32,6 +32,7 @@ export function DayPanelContent({
     updateData: (updater: (prev: DayData) => DayData) => void;
 }) {
     const [newTask, setNewTask] = useState('');
+    const [notes, setNotes] = useState(dayData?.calendar_day?.note || '');
     const [isAddingNote, setIsAddingNote] = useState(false);
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [currentEditTask, setCurrentEditTask] = useState<string>('');
@@ -48,11 +49,57 @@ export function DayPanelContent({
         setCurrentEditTaskID(null);
     }, [date]);
 
-    const hasContent = !!dayData?.notes || dayData.tasks.length > 0;
+    const hasContent =
+        !!dayData?.calendar_day?.note || dayData.tasks.length > 0;
     const isEditing = isAddingNote || isAddingTask || !currentEditTaskID;
 
-    const updateNotes = (val: string) => {
-        updateData((prev) => ({ ...prev, notes: val }));
+    const updateNotes = async () => {
+        if (notes === dayData?.calendar_day?.note) return;
+
+        if (!dayData?.calendar_day?.id) {
+            // - store new calendar day entry
+            const payload = {
+                id: '',
+                date: format(date, 'yyyy-MM-dd'),
+                note: notes,
+            };
+
+            try {
+                const res = await axios.post('/calendar-days', payload);
+                if (res.status !== 201) {
+                    console.error('Failed to add calendar day');
+                    return;
+                }
+
+                updateData((prev) => ({
+                    ...prev,
+                    calendar_day: { ...payload, id: res.data.id },
+                }));
+            } catch (error) {
+                console.error('Failed to add calendar day');
+            }
+        } else {
+            try {
+                const res = await axios.put(
+                    `/calendar-days/${dayData.calendar_day.id}`,
+                    {
+                        note: notes,
+                    },
+                );
+
+                if (res.status !== 200) {
+                    console.error('Failed to update notes');
+                    return;
+                }
+
+                updateData((prev) => ({
+                    ...prev,
+                    calendar_day: { ...prev.calendar_day, note: notes },
+                }));
+            } catch (error) {
+                console.error('Failed to update notes');
+            }
+        }
     };
 
     const handleAddTask = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -336,11 +383,12 @@ export function DayPanelContent({
                         Notes
                     </h3>
                     <Textarea
-                        value={dayData?.notes}
-                        onChange={(e) => updateNotes(e.target.value)}
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        onBlur={(e) => updateNotes(e.target.value)}
                         placeholder="Write your notes here..."
                         className="mt-2 min-h-[150px] resize-none border-none bg-muted/20 text-base transition-all focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-accent"
-                        autoFocus={isAddingNote && !dayData?.notes}
+                        autoFocus={isAddingNote && !dayData?.calendar_day?.note}
                     />
                 </div>
             </section>

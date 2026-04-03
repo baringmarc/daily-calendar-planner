@@ -17,16 +17,7 @@ import {
     setMonth,
     setYear,
 } from 'date-fns';
-import {
-    ChevronLeft,
-    ChevronRight,
-    AlignLeft,
-    CheckSquare,
-    Moon,
-    Sun,
-    Square,
-} from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react';
 import { DayPanelContent } from '@/components/day-panel-content';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';

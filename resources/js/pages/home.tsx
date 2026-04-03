@@ -1,7 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
 import { home } from '@/routes';
-import type { DayData, Store, CalendarData, Task, User } from '@/types';
-import React, { useState, useMemo, useEffect } from 'react';
+import { router } from '@inertiajs/react';
+import type { DayData, CalendarData, Task, User } from '@/types';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     format,
     addMonths,
@@ -38,19 +39,22 @@ import {
 } from '@/components/ui/select';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import axios from 'axios';
+import { Spinner } from '@/components/ui/spinner';
 
-export default function Home({ calendarData }: { calendarData: CalendarData }) {
-    // --- State ---
+export default function Home() {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+    const [calendar, setCalendar] = useState<CalendarData>({});
+    const [isLoading, setIsLoading] = useState(false);
 
-    const [calendar, setCalendar] = useState<CalendarData>(calendarData || {});
-
-    useEffect(() => {
-        localStorage.setItem('calen-notes-db', JSON.stringify(calendar));
-    }, [calendar]);
-
-    const emptyDayData = { notes: '', tasks: [] };
+    const emptyDayData: DayData = {
+        calendar_day: {
+            id: null,
+            note: '',
+        },
+        tasks: [],
+    };
 
     // --- Calendar Math ---
     const monthStart = startOfMonth(currentDate);
@@ -69,43 +73,68 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
     );
     const months = Array.from({ length: 12 }, (_, i) => i);
 
-    // --- Actions ---
+    const MAX_TASK_DESC_LENGTH = 23;
+
+    // - handle date navigation
     const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-
     const handleMonthSelect = (val: string) => {
         setCurrentDate(setMonth(currentDate, parseInt(val)));
     };
-
     const handleYearSelect = (val: string) => {
         setCurrentDate(setYear(currentDate, parseInt(val)));
     };
 
+    const fetchCalendar = useCallback(async (date: Date) => {
+        setIsLoading(true);
+
+        try {
+            const res = await axios.get('/api/calendar', {
+                params: { month: format(date, 'yyyy-MM') },
+            });
+
+            setCalendar(res.data || {});
+        } catch (error) {
+            console.log('Error fetching calendar data:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchCalendar(currentDate);
+    }, [currentDate, fetchCalendar]);
+
     const updateDayData = (date: Date, updater: (prev: DayData) => DayData) => {
         const key = format(date, 'yyyy-MM-dd');
         setCalendar((prev) => {
-            const currentData = prev[key] || emptyDayData;
+            const currentData = prev[key] ?? emptyDayData;
             return { ...prev, [key]: updater(currentData) };
         });
     };
 
-    // --- Render Helpers ---
-    const selectedDateKey = selectedDate
-        ? format(selectedDate, 'yyyy-MM-dd')
+    const selectedDayKey = selectedDay
+        ? format(selectedDay, 'yyyy-MM-dd')
         : null;
     const currentDayData =
-        selectedDateKey && calendar[selectedDateKey]
-            ? calendar[selectedDateKey]
+        selectedDayKey && calendar[selectedDayKey]
+            ? calendar[selectedDayKey]
             : emptyDayData;
 
     return (
         <AppLayout>
             <AnimatePresence mode="wait">
-                {!selectedDate ? (
+                {!selectedDay ? (
                     <div
                         key="calendar"
                         className="flex h-screen w-full overflow-hidden bg-background text-foreground"
                     >
+                        {isLoading && (
+                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60">
+                                <Spinner />
+                            </div>
+                        )}
+
                         {/* CALENDAR VIEW */}
                         <div className="flex flex-1 flex-col">
                             {/* Header */}
@@ -134,7 +163,7 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
                                         className="h-10"
                                         onClick={() => {
                                             setCurrentDate(new Date());
-                                            setSelectedDate(new Date());
+                                            setSelectedDay(new Date());
                                         }}
                                     >
                                         Today
@@ -214,16 +243,17 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
 
                                         const tasks = data?.tasks || [];
 
-                                        const hasNotes = !!data?.notes;
+                                        const hasNotes =
+                                            !!data?.calendar_day.note;
                                         const hasTasks = tasks.length > 0;
                                         const totaltasks = tasks.length || 0;
                                         const donetasks =
                                             tasks.filter((t) => t.is_finished)
                                                 .length || 0;
                                         const isSelected =
-                                            selectedDate &&
+                                            selectedDay &&
                                             format(
-                                                selectedDate,
+                                                selectedDay,
                                                 'yyyy-MM-dd',
                                             ) === dayKey;
                                         const isCurrentMonth = isSameMonth(
@@ -239,7 +269,7 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
                                             <div
                                                 key={day.toString()}
                                                 onClick={() =>
-                                                    setSelectedDate(day)
+                                                    setSelectedDay(day)
                                                 }
                                                 className={cn(
                                                     'group relative cursor-pointer border-r border-b border-border p-2 transition-all hover:bg-card/80',
@@ -309,8 +339,8 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
                                                                             {task
                                                                                 .description
                                                                                 .length >
-                                                                            15
-                                                                                ? `${task.description.slice(0, 23)}...`
+                                                                            MAX_TASK_DESC_LENGTH
+                                                                                ? `${task.description.slice(0, MAX_TASK_DESC_LENGTH)}...`
                                                                                 : task.description}
                                                                         </span>
                                                                     </div>
@@ -342,6 +372,7 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
                         </div>
                     </div>
                 ) : (
+                    // - individual day view
                     <motion.div
                         key="day-view"
                         initial={{ opacity: 0, y: 20 }}
@@ -357,16 +388,16 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
                                     variant="outline"
                                     size="icon"
                                     className="h-10 w-10"
-                                    onClick={() => setSelectedDate(null)}
+                                    onClick={() => setSelectedDay(null)}
                                 >
                                     <ChevronLeft className="h-5 w-5" />
                                 </Button>
                                 <div>
                                     <h1 className="text-2xl font-bold tracking-tight">
-                                        {format(selectedDate, 'EEEE')}
+                                        {format(selectedDay, 'EEEE')}
                                     </h1>
                                     <p className="text-sm text-muted-foreground">
-                                        {format(selectedDate, 'MMMM d, yyyy')}
+                                        {format(selectedDay, 'MMMM d, yyyy')}
                                     </p>
                                 </div>
                             </div>
@@ -376,10 +407,10 @@ export default function Home({ calendarData }: { calendarData: CalendarData }) {
                         <div className="flex-1 overflow-y-auto p-8">
                             <div className="mx-auto max-w-2xl">
                                 <DayPanelContent
-                                    date={selectedDate}
+                                    date={selectedDay}
                                     dayData={currentDayData}
                                     updateData={(updater) =>
-                                        updateDayData(selectedDate, updater)
+                                        updateDayData(selectedDay, updater)
                                     }
                                 />
                             </div>

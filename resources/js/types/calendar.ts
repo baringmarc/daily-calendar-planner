@@ -5,7 +5,7 @@ export type Task = {
 };
 
 export type CalendarDay = {
-    id: string;
+    id: string | null;
     note: string;
 };
 

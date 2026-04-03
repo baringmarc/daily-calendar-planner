@@ -17,8 +17,6 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 import { format } from 'date-fns';
-
-import { router } from '@inertiajs/react';
 import axios from 'axios';
 
 // --- Day Panel Content Component ---
@@ -51,9 +49,9 @@ export function DayPanelContent({
 
     const hasContent =
         !!dayData?.calendar_day?.note || dayData.tasks.length > 0;
-    const isEditing = isAddingNote || isAddingTask || !currentEditTaskID;
+    const isEditing = isAddingNote || isAddingTask || !!currentEditTaskID;
 
-    const updateNotes = async () => {
+    const updateNotes = async (note: string) => {
         if (notes === dayData?.calendar_day?.note) return;
 
         if (!dayData?.calendar_day?.id) {
@@ -61,7 +59,7 @@ export function DayPanelContent({
             const payload = {
                 id: '',
                 date: format(date, 'yyyy-MM-dd'),
-                note: notes,
+                note: note,
             };
 
             try {
@@ -222,6 +220,14 @@ export function DayPanelContent({
                         Take a break, or add some tasks and notes for this day.
                     </p>
                 </div>
+
+                <Button
+                    onClick={() => setIsAddingTask(true)}
+                    className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                    <Plus className="h-4 w-4" />
+                    Add Task
+                </Button>
             </div>
         );
     }
@@ -362,9 +368,7 @@ export function DayPanelContent({
                             onChange={(e) => setNewTask(e.target.value)}
                             placeholder="What needs to be done?"
                             className="h-11 border-none bg-muted/20 pr-12 focus-visible:ring-1 focus-visible:ring-accent"
-                            autoFocus={
-                                isAddingTask && dayData.tasks.length === 0
-                            }
+                            autoFocus={isAddingTask}
                         />
                         <Button
                             type="submit"

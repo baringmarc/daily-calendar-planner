@@ -6,10 +6,12 @@ use Laravel\Fortify\Features;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+])->name('welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
+    // Calendar data API
+    Route::get('/api/calendar', [HomeController::class, 'calendar'])->name('api.calendar');
     
     // Task routes
     Route::resource('tasks', \App\Http\Controllers\TaskController::class)

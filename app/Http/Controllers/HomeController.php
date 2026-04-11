@@ -17,6 +17,7 @@ class HomeController extends Controller
     }
 
     public function calendar(Request $request) {
+        $today = Carbon::now()->format('Y-m-d');
         $month = $request->input('month') ?? Carbon::now()->format('Y-m');
         $baseDate = Carbon::parse($month);
 
@@ -31,28 +32,36 @@ class HomeController extends Controller
         $calendarData = $User->calendarDays()
             ->whereBetween('date', [$startDate, $endDate])
             ->with('tasks')
-            ->get()
-            ->mapWithKeys(function ($day) {
-                return [
-                    $day->date => [
-                        'tasks' => $day->tasks->map(function ($task) {
-                            return [
-                                'id' => $task->id,
-                                'date' => $task->date,
-                                'description' => $task->description,
-                                'is_finished' => $task->is_finished,
-                            ];
-                        })->toArray(),
-                        'calendar_day' => [
-                            'id' => $day->id,
-                            'note' => $day->note,
-                        ],
-                    ],
-                ];
-            })
-            ->toArray();
+            ->orderBy('date', 'desc')
+            ->get();
+        
+        //- prepare calendar data        
+        $calendarData = $calendarData->mapWithKeys(function ($day) use (&$unfinishedTasks, $today) {
+            $tasks = $day->tasks->map(function ($task) use (&$unfinishedTasks, $day, $today) {
 
-        return response()->json($calendarData);
+                return [
+                    'id' => $task->id,
+                    'description' => $task->description,
+                    'is_finished' => $task->is_finished,
+                    'calendar_day_id' => $day->id,
+                ];
+
+            })->toArray();
+
+            return [
+                $day->date => [
+                    'tasks' => $tasks,
+                    'calendar_day' => [
+                        'id' => $day->id,
+                        'note' => $day->note,
+                    ],
+                ],
+            ];
+        })->toArray();
+
+        return response()->json([
+            'calendarData' => $calendarData
+        ]);
     }
 
 }

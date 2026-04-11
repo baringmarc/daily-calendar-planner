@@ -30,4 +30,45 @@ class TaskService
             ]);
         });
     }
+
+    public function carryOverTasks(array $tasks, $targetCalendarDayId)
+    {
+        return DB::transaction(function () use ($tasks, $targetCalendarDayId) {
+            if (!$targetCalendarDayId) {
+                // If no target day is provided, create/find today's calendar day
+                $today = now()->format('Y-m-d');
+                $targetDay = CalendarDay::firstOrCreate([
+                    'user_id' => auth()->id(),
+                    'date' => $today,
+                ]);
+
+                if (empty($targetDay)) {
+                    throw new \Exception('Failed to create or find today\'s calendar day.');
+                }
+
+                $targetCalendarDayId = $targetDay->id;
+            }
+
+            foreach ($tasks as $taskData) {
+                $task = Task::find($taskData['id']);
+                if ($task) {
+                    $task->update([
+                        'calendar_day_id' => $targetCalendarDayId,
+                    ]);
+                }
+            }
+        });
+    }
+
+    public function bulkUpdate(array $tasks)
+    {
+        return DB::transaction(function () use ($tasks) {
+            foreach ($tasks as $taskData) {
+                $task = Task::find($taskData['id']);
+                if ($task) {
+                    $task->update($taskData);
+                }
+            }
+        });
+    }
 }

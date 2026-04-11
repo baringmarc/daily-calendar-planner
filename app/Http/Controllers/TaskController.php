@@ -75,4 +75,30 @@ class TaskController extends Controller
         
         return response()->json(['message' => 'Task deleted successfully'], 200);
     }
+
+    // - carry over tasks from previous days
+    public function carryOverTasks(UpdateTaskRequest $request)
+    {
+        $taskService = new TaskService();
+        
+        if (!$request->has('tasks') || !is_array($request->input('tasks'))) {
+            return response()->json(['message' => 'Invalid tasks data'], 400);
+        }
+
+        $tasks = $request->input('tasks');
+        $updatedTasks = [];
+
+        foreach($tasks as $day) {
+            foreach($day as $task) {
+                $updatedTasks[] = [
+                    'id' => $task['id'],
+                    'date' => now()->format('Y-m-d'),
+                ];
+            }
+        }
+
+        $updatedTasks = $taskService->carryOverTasks($updatedTasks, $request->input('calendar_day_id'));
+
+        return response()->json($updatedTasks, 200);
+    }
 }

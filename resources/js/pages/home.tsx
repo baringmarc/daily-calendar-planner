@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { home } from '@/routes';
 import { router } from '@inertiajs/react';
-import type { DayData, CalendarData, Task, User } from '@/types';
+import type { DayData, CalendarData, Task, UnfinishedTasks } from '@/types';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     format,
@@ -16,6 +16,7 @@ import {
     endOfWeek,
     setMonth,
     setYear,
+    set,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react';
 import { DayPanelContent } from '@/components/day-panel-content';
@@ -32,12 +33,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 import { Spinner } from '@/components/ui/spinner';
+import { UnfinishedTasksDialog } from '@/components/unfinished-tasks-dialog';
 
 export default function Home() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [calendar, setCalendar] = useState<CalendarData>({});
     const [isLoading, setIsLoading] = useState(false);
+    const [openUnfinishedTasksDialog, setOpenUnfinishedTasksDialog] =
+        useState(false);
 
     const emptyDayData: DayData = {
         calendar_day: {
@@ -84,13 +88,57 @@ export default function Home() {
                 params: { month: format(date, 'yyyy-MM') },
             });
 
-            setCalendar(res.data || {});
+            setCalendar(res.data.calendarData || {});
         } catch (error) {
             console.log('Error fetching calendar data:', error);
         } finally {
             setIsLoading(false);
         }
     }, []);
+
+    const todaysCalendarDayId =
+        calendar[format(new Date(), 'yyyy-MM-dd')]?.calendar_day.id;
+
+    const unfinishedTasks = useMemo(() => {
+        const result: UnfinishedTasks = {};
+
+        Object.entries(calendar).forEach(([date, day]) => {
+            const unfinished = day.tasks.filter(
+                (task) =>
+                    !task.is_finished &&
+                    task.calendar_day_id !== todaysCalendarDayId,
+            );
+
+            if (unfinished.length > 0) {
+                result[date] = unfinished;
+            }
+        });
+
+        return result;
+    }, [calendar]);
+
+    // - check if there are unfinished tasks from previous days
+    useEffect(() => {
+        if (Object.keys(unfinishedTasks).length > 0 && !selectedDay) {
+            setOpenUnfinishedTasksDialog(true);
+        }
+    }, [unfinishedTasks, selectedDay]);
+
+    const carryOverTasks = async (carryOverTasks: UnfinishedTasks) => {
+        try {
+            await axios.post('/api/tasks/carry-over', {
+                tasks: carryOverTasks,
+                calendar_day_id: todaysCalendarDayId,
+            });
+
+            setOpenUnfinishedTasksDialog(false);
+
+            // Refetch calendar data to reflect changes
+            fetchCalendar(currentDate);
+        } catch (error) {
+            console.log('Error carrying over tasks:', error);
+        }
+    };
 
     useEffect(() => {
         fetchCalendar(currentDate);
@@ -114,6 +162,12 @@ export default function Home() {
 
     return (
         <AppLayout>
+            <UnfinishedTasksDialog
+                open={openUnfinishedTasksDialog}
+                onOpenChange={setOpenUnfinishedTasksDialog}
+                unfinishedTasks={unfinishedTasks}
+                carryOverTasks={carryOverTasks}
+            />
             <AnimatePresence mode="wait">
                 {!selectedDay ? (
                     <div

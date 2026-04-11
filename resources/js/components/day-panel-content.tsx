@@ -109,6 +109,7 @@ export function DayPanelContent({
             description: newTask.trim(),
             date: format(date, 'yyyy-MM-dd'),
             is_finished: false,
+            calendar_day_id: '',
         };
 
         try {
@@ -119,6 +120,7 @@ export function DayPanelContent({
             }
 
             payload.id = res.data.id;
+            payload.calendar_day_id = res.data.calendar_day_id;
 
             updateData((prev) => ({
                 ...prev,

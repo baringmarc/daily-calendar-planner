@@ -17,6 +17,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('tasks', \App\Http\Controllers\TaskController::class)
          ->except(['create', 'edit', 'show']); // Keep only index, store, update, destroy
 
+    Route::post('/api/tasks/carry-over', [\App\Http\Controllers\TaskController::class, 'carryOverTasks'])->name('tasks.carry-over');
+
     Route::resource('calendar-days', \App\Http\Controllers\CalendarDayController::class)
         ->except(['create', 'edit', 'show']); // Keep only index, store, update, destroy
 });

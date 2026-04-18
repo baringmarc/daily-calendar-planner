@@ -72,7 +72,6 @@ class TaskController extends Controller
     public function destroy(Task $task)
     {
         $task->delete();
-        
         return response()->json(['message' => 'Task deleted successfully'], 200);
     }
 
@@ -87,17 +86,28 @@ class TaskController extends Controller
 
         $tasks = $request->input('tasks');
         $updatedTasks = [];
+        $todayCalendarDayId = $request->input('calendar_day_id') ?? null;
 
         foreach($tasks as $day) {
             foreach($day as $task) {
-                $updatedTasks[] = [
-                    'id' => $task['id'],
-                    'date' => now()->format('Y-m-d'),
-                ];
+                $taskIds[] = $task['id'];
             }
         }
 
-        $updatedTasks = $taskService->carryOverTasks($updatedTasks, $request->input('calendar_day_id'));
+        $updatedTasks = $taskService->carryOverTasks($taskIds, $todayCalendarDayId);
+
+        return response()->json($updatedTasks, 200);
+    }
+
+    public function reorder(UpdateTaskRequest $request) {
+        $taskService = new TaskService();
+
+        if (!$request->has('tasks') || !is_array($request->input('tasks'))) {
+            return response()->json(['message' => 'Invalid tasks data'], 400);
+        }
+
+        $tasks = $request->input('tasks');
+        $updatedTasks = $taskService->reorderTasks($tasks);
 
         return response()->json($updatedTasks, 200);
     }

@@ -34,10 +34,10 @@ export function UnfinishedTasksDialog({
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
-                <div className="max-h-100 overflow-y-auto">
+                <div className="max-h-100 overflow-y-auto border-t-1">
                     {Object.entries(unfinishedTasks).map(([date, tasks]) => (
                         <div key={date} className="mt-4">
-                            <h6 className="text-sm font-semibold">{date}</h6>
+                            <p className="text-sm font-semibold">{date}</p>
 
                             {tasks.map((task: Task) => (
                                 <div

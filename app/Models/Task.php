@@ -19,6 +19,8 @@ class Task extends Model
         'date',
         'is_finished',
         'calendar_day_id',
+        'order',
+        'priority'
     ];
 
     public function calendarDay(): BelongsTo

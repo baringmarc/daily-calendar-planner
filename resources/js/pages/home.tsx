@@ -1,8 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
-import { home } from '@/routes';
-import { router } from '@inertiajs/react';
 import type { DayData, CalendarData, Task, UnfinishedTasks } from '@/types';
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     format,
     addMonths,
@@ -97,7 +95,7 @@ export default function Home() {
     }, []);
 
     const todaysCalendarDayId =
-        calendar[format(new Date(), 'yyyy-MM-dd')]?.calendar_day.id;
+        calendar[format(new Date(), 'yyyy-MM-dd')]?.calendar_day?.id;
 
     const unfinishedTasks = useMemo(() => {
         const result: UnfinishedTasks = {};

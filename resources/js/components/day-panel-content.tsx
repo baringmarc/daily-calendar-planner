@@ -1,22 +1,24 @@
-import type { DayData } from '@/types';
-import {
-    AlignLeft,
-    CalendarIcon,
-    CheckCircle2,
-    CheckSquare,
-    Circle,
-    Plus,
-    Trash2,
-    SquarePen,
-} from 'lucide-react';
+import type { DayData, Task } from '@/types';
+import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import { AlignLeft, CalendarIcon, CheckSquare, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Progress } from './ui/progress';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
-import { format } from 'date-fns';
+
+import { useTaskActions } from '@/hooks/useTaskActions';
+
+import { AddTaskDialog } from '@/components/add-task-dialog';
+
+import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
+import {
+    SortableContext,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableTask } from '@/components/sortable-task';
+import { arrayMove } from '@dnd-kit/sortable';
+
 import axios from 'axios';
 
 // --- Day Panel Content Component ---
@@ -29,19 +31,71 @@ export function DayPanelContent({
     dayData: DayData;
     updateData: (updater: (prev: DayData) => DayData) => void;
 }) {
-    const [newTask, setNewTask] = useState('');
     const [notes, setNotes] = useState(dayData?.calendar_day?.note || '');
-    const [isAddingNote, setIsAddingNote] = useState(false);
-    const [isAddingTask, setIsAddingTask] = useState(false);
-    const [currentEditTask, setCurrentEditTask] = useState<string>('');
-    const [currentEditTaskID, setCurrentEditTaskID] = useState<string | null>(
-        null,
-    );
+
+    const {
+        //- task state
+        newTask,
+        setNewTask,
+        isAddingTask,
+        setIsAddingTask,
+        currentEditTaskID,
+        currentEditTask,
+        setCurrentEditTask,
+        setCurrentEditTaskID,
+        // - task actions
+        updateNotes,
+        handleAddTask,
+        handleDeleteTask,
+        toggleFinishTask,
+        toggleEditTask,
+        handleEditTask,
+    } = useTaskActions({
+        date,
+        dayData,
+        updateData,
+    });
+
+    // - drag logic
+    const [activeId, setActiveId] = useState<string | null>(null);
+
+    function handleDragStart(event: DragStartEvent) {
+        setActiveId(event.active.id as string);
+    }
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = dayData.tasks.findIndex((t) => t.id === active.id);
+        const newIndex = dayData.tasks.findIndex((t) => t.id === over.id);
+
+        const newTasks = arrayMove(dayData.tasks, oldIndex, newIndex);
+
+        setActiveId(null);
+        updateTaskOrder(newTasks);
+    };
+
+    const updateTaskOrder = async (tasks: Task[]) => {
+        try {
+            const res = await axios.put(`api/tasks/reorder`, {
+                tasks: tasks,
+            });
+            if (res.status !== 200) throw new Error();
+
+            updateData((prev) => ({
+                ...prev,
+                tasks: tasks,
+            }));
+        } catch {
+            console.error('Failed to reorder tasks');
+        }
+    };
 
     // Reset local state when date changes
     useEffect(() => {
         setNewTask('');
-        setIsAddingNote(false);
         setIsAddingTask(false);
         setCurrentEditTask('');
         setCurrentEditTaskID(null);
@@ -49,163 +103,7 @@ export function DayPanelContent({
 
     const hasContent =
         !!dayData?.calendar_day?.note || dayData.tasks.length > 0;
-    const isEditing = isAddingNote || isAddingTask || !!currentEditTaskID;
-
-    const updateNotes = async (note: string) => {
-        if (notes === dayData?.calendar_day?.note) return;
-
-        if (!dayData?.calendar_day?.id) {
-            // - store new calendar day entry
-            const payload = {
-                id: '',
-                date: format(date, 'yyyy-MM-dd'),
-                note: note,
-            };
-
-            try {
-                const res = await axios.post('/calendar-days', payload);
-                if (res.status !== 201) {
-                    console.error('Failed to add calendar day');
-                    return;
-                }
-
-                updateData((prev) => ({
-                    ...prev,
-                    calendar_day: { ...payload, id: res.data.id },
-                }));
-            } catch (error) {
-                console.error('Failed to add calendar day');
-            }
-        } else {
-            try {
-                const res = await axios.put(
-                    `/calendar-days/${dayData.calendar_day.id}`,
-                    {
-                        note: notes,
-                    },
-                );
-
-                if (res.status !== 200) {
-                    console.error('Failed to update notes');
-                    return;
-                }
-
-                updateData((prev) => ({
-                    ...prev,
-                    calendar_day: { ...prev.calendar_day, note: notes },
-                }));
-            } catch (error) {
-                console.error('Failed to update notes');
-            }
-        }
-    };
-
-    const handleAddTask = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!newTask.trim()) return;
-
-        const payload = {
-            id: '',
-            description: newTask.trim(),
-            date: format(date, 'yyyy-MM-dd'),
-            is_finished: false,
-            calendar_day_id: '',
-        };
-
-        try {
-            const res = await axios.post('/tasks', payload);
-            if (!res || res.status !== 201) {
-                console.error('Failed to add task');
-                return;
-            }
-
-            payload.id = res.data.id;
-            payload.calendar_day_id = res.data.calendar_day_id;
-
-            updateData((prev) => ({
-                ...prev,
-                tasks: [...prev.tasks, payload],
-            }));
-
-            setIsAddingTask(false);
-            setNewTask('');
-        } catch (error) {
-            console.error('Failed to add task');
-        }
-    };
-
-    const handleDeleteTask = async (id: string) => {
-        try {
-            const res = await axios.delete(`/tasks/${id}`);
-            if (!res || res.status !== 200) {
-                console.error('Failed to delete task');
-                return;
-            }
-
-            updateData((prev) => ({
-                ...prev,
-                tasks: prev.tasks.filter((t) => t.id !== id),
-            }));
-        } catch (error) {
-            console.error('Failed to delete task');
-        }
-    };
-
-    const toggleFinishTask = async (id: string, is_finished: boolean) => {
-        try {
-            const res = await axios.put(`/tasks/${id}`, {
-                is_finished,
-            });
-
-            if (!res || res.status !== 200) {
-                console.error('Failed to update task');
-                return;
-            }
-
-            updateData((prev) => ({
-                ...prev,
-                tasks: prev.tasks.map((task) =>
-                    task.id === id ? res.data : task,
-                ),
-            }));
-        } catch (error) {
-            console.error('Failed to update task');
-        }
-    };
-
-    const toggleEditTask = (id: string, description: string) => {
-        setIsAddingTask(false);
-        setCurrentEditTaskID(id);
-        setCurrentEditTask(description);
-    };
-
-    const handleEditTask = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (currentEditTaskID === null) return;
-
-        try {
-            const res = await axios.put(`/tasks/${currentEditTaskID}`, {
-                description: currentEditTask.trim(),
-            });
-
-            if (!res.data || res.status !== 200) {
-                console.error('Failed to update task');
-                return;
-            }
-
-            updateData((prev) => ({
-                ...prev,
-                tasks: prev.tasks.map((task) =>
-                    task.id === currentEditTaskID ? res.data : task,
-                ),
-            }));
-
-            setCurrentEditTask('');
-            setCurrentEditTaskID(null);
-        } catch (error) {
-            console.error('Failed to add task');
-        }
-    };
+    const isEditing = isAddingTask || !!currentEditTaskID;
 
     // Empty State
     if (!hasContent && !isEditing) {
@@ -218,7 +116,7 @@ export function DayPanelContent({
                     <p className="text-xl font-semibold text-foreground">
                         Nothing to do today
                     </p>
-                    <p className="mx-auto max-w-[250px] text-sm text-muted-foreground">
+                    <p className="mx-auto max-w-62.5 text-sm text-muted-foreground">
                         Take a break, or add some tasks and notes for this day.
                     </p>
                 </div>
@@ -242,6 +140,13 @@ export function DayPanelContent({
 
     return (
         <div className="space-y-10 pb-10">
+            <AddTaskDialog
+                open={isAddingTask}
+                onOpenChange={setIsAddingTask}
+                newTask={newTask}
+                setNewTask={setNewTask}
+                handleAddTask={handleAddTask}
+            />
             {/* tasks Section */}
             <section className="space-y-5">
                 <div className="space-y-3">
@@ -265,92 +170,45 @@ export function DayPanelContent({
                     )}
                 </div>
 
-                <div className="space-y-2">
-                    {dayData.tasks.map((task) =>
-                        currentEditTaskID === task.id ? (
-                            <form
-                                onSubmit={handleEditTask}
-                                className="relative mt-2"
-                                key={task.description}
-                            >
-                                <Input
-                                    value={currentEditTask}
-                                    onChange={(e) =>
-                                        setCurrentEditTask(e.target.value)
-                                    }
-                                    className="h-11 border-none bg-muted/20 pr-12 focus-visible:ring-1 focus-visible:ring-accent"
-                                    autoFocus={true}
+                <DndContext
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    collisionDetection={closestCenter}
+                >
+                    <DragOverlay>
+                        {activeId ? (
+                            <div className="rounded-lg border bg-card p-3 shadow-lg">
+                                {
+                                    dayData.tasks.find((t) => t.id === activeId)
+                                        ?.description
+                                }
+                            </div>
+                        ) : null}
+                    </DragOverlay>
+
+                    <SortableContext
+                        items={dayData.tasks.map((task) => task.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        <div className="space-y-2">
+                            {dayData.tasks.map((task) => (
+                                <SortableTask
+                                    key={task.id}
+                                    task={task}
+                                    actions={{
+                                        currentEditTaskID,
+                                        currentEditTask,
+                                        setCurrentEditTask,
+                                        handleDeleteTask,
+                                        handleEditTask,
+                                        toggleFinishTask,
+                                        toggleEditTask,
+                                    }}
                                 />
-                                <Button
-                                    type="submit"
-                                    size="sm"
-                                    disabled={!currentEditTask.trim()}
-                                    className="absolute top-1 right-1 bottom-1 h-auto bg-accent text-accent-foreground hover:bg-accent/90"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </form>
-                        ) : (
-                            <motion.div
-                                layout
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                key={task.id}
-                                className={cn(
-                                    'group flex items-center gap-3 rounded-lg border p-3 transition-all',
-                                    task.is_finished
-                                        ? 'border-transparent bg-muted/30'
-                                        : 'border-border bg-card shadow-sm hover:border-accent/30',
-                                )}
-                            >
-                                <button
-                                    onClick={() =>
-                                        toggleFinishTask(
-                                            task.id,
-                                            !task.is_finished,
-                                        )
-                                    }
-                                    className="shrink-0 text-muted-foreground transition-colors hover:text-accent focus:outline-none"
-                                >
-                                    {task.is_finished ? (
-                                        <CheckCircle2 className="h-5 w-5 text-accent" />
-                                    ) : (
-                                        <Circle className="h-5 w-5" />
-                                    )}
-                                </button>
-                                <span
-                                    className={cn(
-                                        'flex-1 text-sm transition-all',
-                                        task.is_finished
-                                            ? 'text-muted-foreground line-through opacity-70'
-                                            : 'font-medium text-foreground',
-                                    )}
-                                >
-                                    {task.description}
-                                </span>
-
-                                <button
-                                    onClick={() =>
-                                        toggleEditTask(
-                                            task.id,
-                                            task.description,
-                                        )
-                                    }
-                                    className="shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
-                                >
-                                    <SquarePen className="h-4 w-4" />
-                                </button>
-
-                                <button
-                                    onClick={() => handleDeleteTask(task.id)}
-                                    className="shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            </motion.div>
-                        ),
-                    )}
-                </div>
+                            ))}
+                        </div>
+                    </SortableContext>
+                </DndContext>
 
                 {!isAddingTask && !currentEditTaskID && (
                     <Button
@@ -360,27 +218,6 @@ export function DayPanelContent({
                         <Plus className="h-4 w-4" />
                         Add Task
                     </Button>
-                )}
-
-                {/* Add Todo Input */}
-                {isAddingTask && (
-                    <form onSubmit={handleAddTask} className="relative mt-2">
-                        <Input
-                            value={newTask}
-                            onChange={(e) => setNewTask(e.target.value)}
-                            placeholder="What needs to be done?"
-                            className="h-11 border-none bg-muted/20 pr-12 focus-visible:ring-1 focus-visible:ring-accent"
-                            autoFocus={isAddingTask}
-                        />
-                        <Button
-                            type="submit"
-                            size="sm"
-                            disabled={!newTask.trim()}
-                            className="absolute top-1 right-1 bottom-1 h-auto bg-accent text-accent-foreground hover:bg-accent/90"
-                        >
-                            <Plus className="h-4 w-4" />
-                        </Button>
-                    </form>
                 )}
 
                 <div className="mt-10">
@@ -393,8 +230,8 @@ export function DayPanelContent({
                         onChange={(e) => setNotes(e.target.value)}
                         onBlur={(e) => updateNotes(e.target.value)}
                         placeholder="Write your notes here..."
-                        className="mt-2 min-h-[150px] resize-none border-none bg-muted/20 text-base transition-all focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-accent"
-                        autoFocus={isAddingNote && !dayData?.calendar_day?.note}
+                        className="mt-2 min-h-37.5 resize-none border-none bg-muted/20 text-base transition-all focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-accent"
+                        // autoFocus={isAddingNote && !dayData?.calendar_day?.note}
                     />
                 </div>
             </section>

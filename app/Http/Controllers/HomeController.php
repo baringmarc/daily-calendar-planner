@@ -17,7 +17,6 @@ class HomeController extends Controller
     }
 
     public function calendar(Request $request) {
-        $today = Carbon::now()->format('Y-m-d');
         $month = $request->input('month') ?? Carbon::now()->format('Y-m');
         $baseDate = Carbon::parse($month);
 
@@ -36,8 +35,8 @@ class HomeController extends Controller
             ->get();
         
         //- prepare calendar data        
-        $calendarData = $calendarData->mapWithKeys(function ($day) use (&$unfinishedTasks, $today) {
-            $tasks = $day->tasks->map(function ($task) use (&$unfinishedTasks, $day, $today) {
+        $calendarData = $calendarData->mapWithKeys(function ($day) {
+            $tasks = $day->tasks->map(function ($task) use ($day) {
 
                 return [
                     'id' => $task->id,

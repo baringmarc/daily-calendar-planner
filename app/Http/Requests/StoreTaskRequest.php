@@ -20,6 +20,7 @@ class StoreTaskRequest extends FormRequest
             'description' => 'required|string|max:255',
             'date' => 'required|date',
             'is_finished' => 'boolean',
+            'priority' => 'int'
         ];
     }
 }

@@ -10,10 +10,9 @@ import {
     SquarePen,
     Logs,
 } from 'lucide-react';
-import { Input } from './ui/input';
-import { Button } from './ui/button';
 
-import type { Task, TaskActions } from '@/types';
+import type { Task } from '@/types';
+import { PRIORITY_MAP, PRIORITY_STYLES } from '@/constants/priority';
 
 export function SortableTask({
     task,
@@ -21,15 +20,15 @@ export function SortableTask({
 }: {
     task: Task;
     actions: {
-        currentEditTaskID: string | null;
-        currentEditTask: string;
-        setCurrentEditTask: (value: string) => void;
+        currentEditTask: Task | null;
+        setCurrentEditTask: React.Dispatch<React.SetStateAction<Task | null>>;
         handleDeleteTask: (id: string) => Promise<void>;
         toggleFinishTask: (id: string, is_finished: boolean) => Promise<void>;
-        toggleEditTask: (id: string, description: string) => void;
-        handleEditTask: (e: React.FormEvent) => Promise<void>;
+        toggleEditTask: (task: Task) => void;
     };
 }) {
+    const priorityStyle = PRIORITY_STYLES[task.priority];
+
     const { attributes, listeners, setNodeRef, transform, transition } =
         useSortable({ id: task.id });
 
@@ -40,40 +39,10 @@ export function SortableTask({
 
     const {
         //- task state
-        currentEditTaskID,
-        currentEditTask,
-        setCurrentEditTask,
         handleDeleteTask,
-        handleEditTask,
         toggleFinishTask,
         toggleEditTask,
     } = actions;
-
-    // - edit task mode
-    if (currentEditTaskID === task.id) {
-        return (
-            <form
-                onSubmit={handleEditTask}
-                className="relative mt-2"
-                key={task.description}
-            >
-                <Input
-                    value={currentEditTask}
-                    onChange={(e) => setCurrentEditTask(e.target.value)}
-                    className="h-11 border-none bg-muted/20 pr-12 focus-visible:ring-1 focus-visible:ring-accent"
-                    autoFocus={true}
-                />
-                <Button
-                    type="submit"
-                    size="sm"
-                    disabled={!currentEditTask.trim()}
-                    className="absolute top-1 right-1 bottom-1 h-auto bg-accent text-accent-foreground hover:bg-accent/90"
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
-            </form>
-        );
-    }
 
     return (
         <motion.div
@@ -84,12 +53,23 @@ export function SortableTask({
             animate={{ opacity: 1, y: 0 }}
             key={task.id}
             className={cn(
-                'group flex items-center gap-3 rounded-lg border p-3 transition-all',
+                'group flex items-center gap-3 rounded-lg border border-l-4 p-3 transition-all',
                 task.is_finished
-                    ? 'border-transparent bg-muted/30'
-                    : 'border-border bg-card shadow-sm hover:border-accent/30',
+                    ? 'border-transparent bg-muted/70'
+                    : cn(
+                          'border-border bg-card shadow-sm hover:border-accent/70',
+                          priorityStyle.card,
+                      ),
             )}
         >
+            <span
+                className={cn(
+                    'w-16 rounded-full px-2 py-0.5 text-center text-xs font-medium',
+                    priorityStyle.badge,
+                )}
+            >
+                {PRIORITY_MAP[task.priority].label}
+            </span>
             <button
                 onClick={() => toggleFinishTask(task.id, !task.is_finished)}
                 className="shrink-0 text-muted-foreground transition-colors hover:text-accent focus:outline-none"
@@ -112,7 +92,7 @@ export function SortableTask({
             </span>
 
             <button
-                onClick={() => toggleEditTask(task.id, task.description)}
+                onClick={() => toggleEditTask(task)}
                 className="shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
             >
                 <SquarePen className="h-4 w-4" />

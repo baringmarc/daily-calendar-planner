@@ -27,6 +27,8 @@ class UpdateTaskRequest extends FormRequest
             'description' => 'string|max:255',
             'date' => 'date',
             'is_finished' => 'boolean',
+            'priority' => 'int',
+            'order' => 'int',
         ];
     }
 }

@@ -5,11 +5,11 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Progress } from './ui/progress';
-import { Input } from './ui/input';
 
 import { useTaskActions } from '@/hooks/useTaskActions';
 
 import { AddTaskDialog } from '@/components/add-task-dialog';
+import { EditTaskDialog } from '@/components/edit-task-dialog';
 
 import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
 import {
@@ -39,10 +39,8 @@ export function DayPanelContent({
         setNewTask,
         isAddingTask,
         setIsAddingTask,
-        currentEditTaskID,
         currentEditTask,
         setCurrentEditTask,
-        setCurrentEditTaskID,
         // - task actions
         updateNotes,
         handleAddTask,
@@ -97,13 +95,12 @@ export function DayPanelContent({
     useEffect(() => {
         setNewTask('');
         setIsAddingTask(false);
-        setCurrentEditTask('');
-        setCurrentEditTaskID(null);
+        setCurrentEditTask(null);
     }, [date]);
 
     const hasContent =
         !!dayData?.calendar_day?.note || dayData.tasks.length > 0;
-    const isEditing = isAddingTask || !!currentEditTaskID;
+    const isEditing = isAddingTask || !!currentEditTask;
 
     // Empty State
     if (!hasContent && !isEditing) {
@@ -146,6 +143,14 @@ export function DayPanelContent({
                 newTask={newTask}
                 setNewTask={setNewTask}
                 handleAddTask={handleAddTask}
+            />
+
+            <EditTaskDialog
+                open={!!currentEditTask}
+                onOpenChange={toggleEditTask}
+                currentEditTask={currentEditTask}
+                setCurrentEditTask={setCurrentEditTask}
+                handleEditTask={handleEditTask}
             />
             {/* tasks Section */}
             <section className="space-y-5">
@@ -196,11 +201,9 @@ export function DayPanelContent({
                                     key={task.id}
                                     task={task}
                                     actions={{
-                                        currentEditTaskID,
                                         currentEditTask,
                                         setCurrentEditTask,
                                         handleDeleteTask,
-                                        handleEditTask,
                                         toggleFinishTask,
                                         toggleEditTask,
                                     }}
@@ -210,7 +213,7 @@ export function DayPanelContent({
                     </SortableContext>
                 </DndContext>
 
-                {!isAddingTask && !currentEditTaskID && (
+                {!isAddingTask && !currentEditTask && (
                     <Button
                         onClick={() => setIsAddingTask(true)}
                         className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"

@@ -43,6 +43,8 @@ class HomeController extends Controller
                     'description' => $task->description,
                     'is_finished' => $task->is_finished,
                     'calendar_day_id' => $day->id,
+                    'priority' => $task->priority,
+                    'order' => $task->order
                 ];
 
             })->toArray();

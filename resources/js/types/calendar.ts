@@ -3,6 +3,8 @@ export type Task = {
     description: string;
     is_finished: boolean;
     calendar_day_id: string;
+    priority: number;
+    order: number;
 };
 
 export type CalendarDay = {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import type { DayData } from '@/types';
+import type { DayData, Task } from '@/types';
 
 export function useTaskActions({
     date,
@@ -14,11 +14,7 @@ export function useTaskActions({
 }) {
     const [newTask, setNewTask] = useState('');
     const [isAddingTask, setIsAddingTask] = useState(false);
-
-    const [currentEditTaskID, setCurrentEditTaskID] = useState<string | null>(
-        null,
-    );
-    const [currentEditTask, setCurrentEditTask] = useState('');
+    const [currentEditTask, setCurrentEditTask] = useState<Task | null>(null);
 
     const updateNotes = async (note: string) => {
         if (note === dayData?.calendar_day?.note) return;
@@ -108,7 +104,7 @@ export function useTaskActions({
         }
     };
 
-    // -
+    // - check off task
     const toggleFinishTask = async (id: string, is_finished: boolean) => {
         try {
             const res = await axios.put(`/tasks/${id}`, { is_finished });
@@ -125,34 +121,29 @@ export function useTaskActions({
         }
     };
 
-    // toggle edit mode
-    const toggleEditTask = (id: string, description: string) => {
+    // toggle edit mode (opens edit modal)
+    const toggleEditTask = (task: Task | null) => {
         setIsAddingTask(false);
-        setCurrentEditTaskID(id);
-        setCurrentEditTask(description);
+        setCurrentEditTask(task);
     };
 
     // EDIT task
-    const handleEditTask = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!currentEditTaskID) return;
+    const handleEditTask = async (task: Task | null) => {
+        if (!task) return;
 
         try {
-            const res = await axios.put(`/tasks/${currentEditTaskID}`, {
-                description: currentEditTask.trim(),
-            });
+            const res = await axios.put(`/tasks/${task.id}`, task);
 
             if (res.status !== 200) throw new Error();
 
             updateData((prev) => ({
                 ...prev,
                 tasks: prev.tasks.map((task) =>
-                    task.id === currentEditTaskID ? res.data : task,
+                    task.id === currentEditTask?.id ? res.data : task,
                 ),
             }));
 
-            setCurrentEditTask('');
-            setCurrentEditTaskID(null);
+            setCurrentEditTask(null);
         } catch {
             console.error('Failed to update task');
         }
@@ -164,10 +155,8 @@ export function useTaskActions({
         setNewTask,
         isAddingTask,
         setIsAddingTask,
-        currentEditTaskID,
         currentEditTask,
         setCurrentEditTask,
-        setCurrentEditTaskID,
         // actions
         updateNotes,
         handleAddTask,

@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useState } from 'react';
-import type { Priority } from '@/constants/priority';
+import type { TaskFormValues } from '@/components/task-form-dialog';
 import {
     createCalendarDay,
     createTask,
@@ -12,6 +12,9 @@ import {
 } from '@/lib/calendar-api';
 import { validationErrors } from '@/lib/errors';
 import type { DayData, Task } from '@/types';
+
+// Which task dialog is open: adding a new task, or editing one.
+type TaskDialog = { task: Task | null } | null;
 
 /**
  * One day's mutations. Each one patches the cached calendar through
@@ -26,9 +29,7 @@ export function useTaskActions({
     dayData: DayData;
     updateData: (updater: (prev: DayData) => DayData) => void;
 }) {
-    const [newTask, setNewTask] = useState('');
-    const [isAddingTask, setIsAddingTask] = useState(false);
-    const [currentEditTask, setCurrentEditTask] = useState<Task | null>(null);
+    const [taskDialog, setTaskDialog] = useState<TaskDialog>(null);
 
     const dateKey = format(date, 'yyyy-MM-dd');
 
@@ -50,14 +51,34 @@ export function useTaskActions({
         meta: { errorMessage: "Couldn't save the note" },
     });
 
-    const addTask = useMutation({
-        mutationFn: createTask,
-        onSuccess: (task) => {
-            updateData((prev) => ({ ...prev, tasks: [...prev.tasks, task] }));
-            setNewTask('');
-            setIsAddingTask(false);
+    // Adds a task, or saves the one being edited.
+    const saveTask = useMutation({
+        mutationFn: ({
+            task,
+            values,
+        }: {
+            task: Task | null;
+            values: TaskFormValues;
+        }) =>
+            task
+                ? updateTask(task.id, values)
+                : createTask({ ...values, date: dateKey }),
+        onSuccess: (saved, { task }) => {
+            if (task) {
+                replaceTask(saved);
+            } else {
+                updateData((prev) => ({
+                    ...prev,
+                    tasks: [...prev.tasks, saved],
+                }));
+            }
+
+            setTaskDialog(null);
         },
-        meta: { errorMessage: "Couldn't add the task", inlineValidation: true },
+        meta: {
+            errorMessage: "Couldn't save the task",
+            inlineValidation: true,
+        },
     });
 
     const removeTask = useMutation({
@@ -75,31 +96,10 @@ export function useTaskActions({
     });
 
     const toggleFinished = useMutation({
-        mutationFn: ({
-            id,
-            is_finished,
-        }: {
-            id: number;
-            is_finished: boolean;
-        }) => updateTask(id, { is_finished }),
+        mutationFn: (task: Task) =>
+            updateTask(task.id, { is_finished: !task.is_finished }),
         onSuccess: replaceTask,
         meta: { errorMessage: "Couldn't update the task" },
-    });
-
-    const editTask = useMutation({
-        mutationFn: (task: Task) =>
-            updateTask(task.id, {
-                description: task.description,
-                priority: task.priority,
-            }),
-        onSuccess: (task) => {
-            replaceTask(task);
-            setCurrentEditTask(null);
-        },
-        meta: {
-            errorMessage: "Couldn't save the task",
-            inlineValidation: true,
-        },
     });
 
     const reorder = useMutation({
@@ -127,63 +127,33 @@ export function useTaskActions({
         }
     };
 
-    const handleAddTask = async (task: string, priority: Priority) => {
-        if (!task.trim()) {
-            return;
-        }
-
-        addTask.mutate({ description: task.trim(), date: dateKey, priority });
+    // Opening or closing the dialog clears the last attempt's errors.
+    const openTaskDialog = (task: Task | null) => {
+        saveTask.reset();
+        setTaskDialog({ task });
     };
 
-    const handleDeleteTask = async (id: number) => {
-        removeTask.mutate(id);
+    const closeTaskDialog = () => {
+        saveTask.reset();
+        setTaskDialog(null);
     };
-
-    const toggleFinishTask = async (id: number, is_finished: boolean) => {
-        toggleFinished.mutate({ id, is_finished });
-    };
-
-    // Opening or closing a dialog clears the last attempt's errors.
-    const openAddTask = (open: boolean) => {
-        addTask.reset();
-        setIsAddingTask(open);
-    };
-
-    // toggle edit mode (opens edit modal)
-    const toggleEditTask = (task: Task | null) => {
-        editTask.reset();
-        setIsAddingTask(false);
-        setCurrentEditTask(task);
-    };
-
-    const handleEditTask = async (task: Task | null) => {
-        if (task) {
-            editTask.mutate(task);
-        }
-    };
-
-    // `tasks` is the day's whole list in its new order.
-    const updateTaskOrder = (tasks: Task[]) => reorder.mutate(tasks);
 
     return {
-        // state
-        newTask,
-        setNewTask,
-        isAddingTask,
-        setIsAddingTask,
-        openAddTask,
-        currentEditTask,
-        setCurrentEditTask,
-        // 422 messages for the add and edit dialogs, by field
-        addTaskErrors: validationErrors(addTask.error),
-        editTaskErrors: validationErrors(editTask.error),
-        // actions
+        // The add/edit dialog
+        taskDialog,
+        openAddTask: () => openTaskDialog(null),
+        openEditTask: (task: Task) => openTaskDialog(task),
+        closeTaskDialog,
+        submitTask: (values: TaskFormValues) =>
+            saveTask.mutate({ task: taskDialog?.task ?? null, values }),
+        isSavingTask: saveTask.isPending,
+        // 422 messages by field
+        taskErrors: validationErrors(saveTask.error),
+        // Actions
         updateNotes,
-        handleAddTask,
-        handleDeleteTask,
-        toggleFinishTask,
-        toggleEditTask,
-        handleEditTask,
-        updateTaskOrder,
+        deleteTask: (task: Task) => removeTask.mutate(task.id),
+        toggleFinished: (task: Task) => toggleFinished.mutate(task),
+        // `tasks` is the day's whole list in its new order.
+        reorderTasks: (tasks: Task[]) => reorder.mutate(tasks),
     };
 }

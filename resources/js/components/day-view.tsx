@@ -47,7 +47,10 @@ export function DayView({
 
             <div className="flex-1 overflow-y-auto p-8">
                 <div className="mx-auto max-w-2xl">
+                    {/* Keyed on the date so a different day starts with fresh
+                        local state (note draft, open dialog). */}
                     <DayPanelContent
+                        key={format(date, 'yyyy-MM-dd')}
                         date={date}
                         dayData={dayData}
                         updateData={updateData}

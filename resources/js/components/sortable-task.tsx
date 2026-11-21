@@ -9,16 +9,14 @@ import type { Task } from '@/types';
 
 export function SortableTask({
     task,
-    actions,
+    onToggleFinished,
+    onEdit,
+    onDelete,
 }: {
     task: Task;
-    actions: {
-        currentEditTask: Task | null;
-        setCurrentEditTask: React.Dispatch<React.SetStateAction<Task | null>>;
-        handleDeleteTask: (id: number) => Promise<void>;
-        toggleFinishTask: (id: number, is_finished: boolean) => Promise<void>;
-        toggleEditTask: (task: Task) => void;
-    };
+    onToggleFinished: (task: Task) => void;
+    onEdit: (task: Task) => void;
+    onDelete: (task: Task) => void;
 }) {
     const priorityStyle = PRIORITY_STYLES[task.priority];
 
@@ -29,13 +27,6 @@ export function SortableTask({
         transform: CSS.Transform.toString(transform),
         transition,
     };
-
-    const {
-        //- task state
-        handleDeleteTask,
-        toggleFinishTask,
-        toggleEditTask,
-    } = actions;
 
     return (
         <motion.div
@@ -64,7 +55,7 @@ export function SortableTask({
                 {PRIORITY_MAP[task.priority].label}
             </span>
             <button
-                onClick={() => toggleFinishTask(task.id, !task.is_finished)}
+                onClick={() => onToggleFinished(task)}
                 className="shrink-0 text-muted-foreground transition-colors hover:text-accent focus:outline-none"
             >
                 {task.is_finished ? (
@@ -85,14 +76,14 @@ export function SortableTask({
             </span>
 
             <button
-                onClick={() => toggleEditTask(task)}
+                onClick={() => onEdit(task)}
                 className="shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
             >
                 <SquarePen className="h-4 w-4" />
             </button>
 
             <button
-                onClick={() => handleDeleteTask(task.id)}
+                onClick={() => onDelete(task)}
                 className="shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
             >
                 <Trash2 className="h-4 w-4" />

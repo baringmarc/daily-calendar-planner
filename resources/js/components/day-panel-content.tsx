@@ -7,11 +7,11 @@ import {
 } from '@dnd-kit/sortable';
 import { arrayMove } from '@dnd-kit/sortable';
 
+import { format } from 'date-fns';
 import { AlignLeft, CalendarIcon, CheckSquare, Plus } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { AddTaskDialog } from '@/components/add-task-dialog';
-import { EditTaskDialog } from '@/components/edit-task-dialog';
+import { useState } from 'react';
 import { SortableTask } from '@/components/sortable-task';
+import { TaskFormDialog } from '@/components/task-form-dialog';
 import { useTaskActions } from '@/hooks/useTaskActions';
 import type { DayData } from '@/types';
 import { Button } from './ui/button';
@@ -56,24 +56,17 @@ export function DayPanelContent({
     };
 
     const {
-        //- task state
-        newTask,
-        setNewTask,
-        isAddingTask,
-        setIsAddingTask,
+        taskDialog,
         openAddTask,
-        currentEditTask,
-        setCurrentEditTask,
-        addTaskErrors,
-        editTaskErrors,
-        // - task actions
+        openEditTask,
+        closeTaskDialog,
+        submitTask,
+        isSavingTask,
+        taskErrors,
         updateNotes,
-        handleAddTask,
-        handleDeleteTask,
-        toggleFinishTask,
-        toggleEditTask,
-        handleEditTask,
-        updateTaskOrder,
+        deleteTask,
+        toggleFinished,
+        reorderTasks,
     } = useTaskActions({
         date,
         dayData,
@@ -100,22 +93,26 @@ export function DayPanelContent({
         const newTasks = arrayMove(dayData.tasks, oldIndex, newIndex);
 
         setActiveId(null);
-        updateTaskOrder(newTasks);
+        reorderTasks(newTasks);
     };
-
-    // Reset local state when date changes
-    useEffect(() => {
-        setNewTask('');
-        setIsAddingTask(false);
-        setCurrentEditTask(null);
-    }, [date, setNewTask, setIsAddingTask, setCurrentEditTask]);
 
     const hasContent =
         !!dayData?.calendar_day?.note || dayData.tasks.length > 0;
-    const isEditing = isAddingTask || !!currentEditTask;
+
+    const taskFormDialog = (
+        <TaskFormDialog
+            open={taskDialog !== null}
+            onOpenChange={(open) => !open && closeTaskDialog()}
+            task={taskDialog?.task ?? null}
+            dateLabel={format(date, 'EEEE, MMMM d')}
+            onSubmit={submitTask}
+            isSaving={isSavingTask}
+            errors={taskErrors}
+        />
+    );
 
     // Empty State
-    if (!hasContent && !isEditing) {
+    if (!hasContent) {
         return (
             <div className="flex flex-col items-center justify-center space-y-6 p-6 text-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted/50">
@@ -131,12 +128,14 @@ export function DayPanelContent({
                 </div>
 
                 <Button
-                    onClick={() => openAddTask(true)}
+                    onClick={openAddTask}
                     className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
                 >
                     <Plus className="h-4 w-4" />
                     Add Task
                 </Button>
+
+                {taskFormDialog}
             </div>
         );
     }
@@ -149,23 +148,8 @@ export function DayPanelContent({
 
     return (
         <div className="space-y-10 pb-10">
-            <AddTaskDialog
-                open={isAddingTask}
-                onOpenChange={openAddTask}
-                newTask={newTask}
-                setNewTask={setNewTask}
-                handleAddTask={handleAddTask}
-                errors={addTaskErrors}
-            />
+            {taskFormDialog}
 
-            <EditTaskDialog
-                open={!!currentEditTask}
-                onOpenChange={toggleEditTask}
-                currentEditTask={currentEditTask}
-                setCurrentEditTask={setCurrentEditTask}
-                handleEditTask={handleEditTask}
-                errors={editTaskErrors}
-            />
             {/* tasks Section */}
             <section className="space-y-5">
                 <div className="space-y-3">
@@ -214,28 +198,22 @@ export function DayPanelContent({
                                 <SortableTask
                                     key={task.id}
                                     task={task}
-                                    actions={{
-                                        currentEditTask,
-                                        setCurrentEditTask,
-                                        handleDeleteTask,
-                                        toggleFinishTask,
-                                        toggleEditTask,
-                                    }}
+                                    onToggleFinished={toggleFinished}
+                                    onEdit={openEditTask}
+                                    onDelete={deleteTask}
                                 />
                             ))}
                         </div>
                     </SortableContext>
                 </DndContext>
 
-                {!isAddingTask && !currentEditTask && (
-                    <Button
-                        onClick={() => openAddTask(true)}
-                        className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Task
-                    </Button>
-                )}
+                <Button
+                    onClick={openAddTask}
+                    className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                    <Plus className="h-4 w-4" />
+                    Add Task
+                </Button>
 
                 <div className="mt-10">
                     <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">

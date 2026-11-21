@@ -18,7 +18,7 @@ This is every known bug, cleanup and feature idea from the 2026-11-21 project re
 | 4 | UX polish | UX-01 – UX-12 |
 | 5 | Feature backlog (to discuss) | FEAT-01 – FEAT-19 |
 
-Current CI state (checked 2026-11-21, after Phases 0–3): `composer run ci:check` passes, with **118 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
+Current CI state (checked 2026-11-21, after Phases 0–4): `composer run ci:check` passes, with **125 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
 
 ---
 
@@ -157,49 +157,49 @@ Current CI state (checked 2026-11-21, after Phases 0–3): `composer run ci:chec
 
 ## Phase 4: UX polish
 
-- [ ] **UX-01: Visible error and success feedback** · `S`
+- [x] **UX-01: Visible error and success feedback** · `S`
   - Every failure today is a silent `console.error`. Add a toast system (e.g. `sonner`), show 422 validation messages inline in the dialogs, and roll back or refetch after a failed mutation.
 
-- [ ] **UX-02: Confirm or undo task deletion** · `S`
+- [x] **UX-02: Confirm or undo task deletion** · `S`
   - Either a confirm dialog or (preferred) an "Undo" toast for a few seconds before the delete is sent.
 
-- [ ] **UX-03: Make the add/edit dialogs real forms** · `S`
+- [x] **UX-03: Make the add/edit dialogs real forms** · `S`
   - Wrap them in `<form>` so Enter submits. Escape and clicking outside close them (they're controlled `AlertDialog`s with no `onOpenChange` today).
   - Disable Submit while the description is empty or a save is in flight, and show a loading state.
   - Reset the priority after adding a task. Show the 255-char limit.
   - Consider `Dialog` instead of `AlertDialog`, which is meant for confirmations. Replace the hardcoded `bg-green-800!` Submit colour with a theme token.
 
-- [ ] **UX-04: Optimistic reordering** · `S`
+- [x] **UX-04: Optimistic reordering** · `S`
   - Apply the new order immediately and roll back if the request fails. Today the list snaps back until the server responds.
 
-- [ ] **UX-05: Touch and mobile support** · `M`
+- [x] **UX-05: Touch and mobile support** · `M`
   - Edit, delete and the drag handle are `opacity-0` until hover, so they're unreachable on touch devices. Show them always on small screens, or use a per-task menu.
   - Configure dnd-kit `TouchSensor`/`KeyboardSensor` explicitly.
   - Add a compact month grid for phones (e.g. dots instead of task previews), and check the `h-screen` layout inside the sidebar shell for double scrollbars.
 
-- [ ] **UX-06: Accessibility pass** · `M`
+- [x] **UX-06: Accessibility pass** · `M`
   - `aria-label`s on icon-only buttons (prev/next, back, edit, delete, drag, finish toggle).
   - Day cells become `<button>`s with arrow-key navigation, and today gets `aria-current="date"`.
   - Check colour contrast of the priority badges in dark mode. The edit icon shouldn't turn destructive red on hover.
 
-- [ ] **UX-07: Put the month and day in the URL** · `M`
+- [x] **UX-07: Put the month and day in the URL** · `M`
   - e.g. `/?month=2026-11&day=2026-11-21`, so refresh, browser back/forward and deep links work. The back button in the day view should behave like browser back.
 
-- [ ] **UX-08: Better carry-over dialog** · `S`
+- [x] **UX-08: Better carry-over dialog** · `S`
   - Checkboxes to choose which tasks to carry over, with select all/none.
   - "Not now" suppresses the prompt until tomorrow (today it reopens every time you return to the month view).
   - Show readable dates ("Thu, Nov 19") and priority badges.
 
-- [ ] **UX-09: Autosave notes** · `S`
+- [x] **UX-09: Autosave notes** · `S`
   - Save with a debounce while typing, show a "Saving…/Saved" indicator, and keep save-on-blur as a fallback.
 
-- [ ] **UX-10: Richer month-view cells** · `S`
+- [x] **UX-10: Richer month-view cells** · `S`
   - "+N more" when a day has more than 3 tasks, a note indicator (the code for it is commented out in [home.tsx](resources/js/pages/home.tsx)), and an "all done" style using the unused `finishedAllTasks`.
 
-- [ ] **UX-11: Year picker range** · `S`
+- [x] **UX-11: Year picker range** · `S`
   - The ±5-year list moves with the current date as you navigate. Use a fixed range around the real current year, or allow free input.
 
-- [ ] **UX-12: Copy and empty states** · `S`
+- [x] **UX-12: Copy and empty states** · `S`
   - The empty day says "Nothing to do today" for every date. Use the right wording for past and future days.
   - Give the dialogs a real description (it's empty today, and Radix warns about that).
 

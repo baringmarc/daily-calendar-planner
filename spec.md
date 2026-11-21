@@ -41,7 +41,7 @@ Future candidates are listed in [tasks.md → Feature backlog](tasks.md#phase-5-
 | Backend | Laravel 13, PHP 8.3+ |
 | Auth | Laravel Fortify (registration, password reset, email verification, 2FA) |
 | Frontend | Inertia v2 + React 19 + TypeScript |
-| UI | Tailwind CSS v4, shadcn/Radix components, lucide icons, framer-motion |
+| UI | Tailwind CSS v4, shadcn/Radix components, lucide icons, framer-motion, sonner (toasts) |
 | Dates | date-fns (frontend), Carbon (backend) |
 | Drag and drop | @dnd-kit |
 | Database | SQLite by default (any Laravel-supported DB should work) |
@@ -87,7 +87,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 - An **unfinished past task** is a task with `is_finished = false` on a date strictly **before today**. Tasks on today or future dates are never offered for carry-over.
 - When the user opens the calendar and unfinished past tasks exist, the app offers to move them to today.
 - The candidate list is computed from **all** past days, not only the month on screen.
-- The user can accept, or dismiss with "Not now". Dismissing suppresses the prompt for the rest of that day. ⬜ [UX-08](tasks.md)
+- The user picks which of the tasks to move (all are ticked to start), or dismisses with "Not now". Dismissing, or carrying tasks over, suppresses the prompt for the rest of that day in that browser.
 - Accepting moves the selected tasks to today's calendar day, creating it if needed. They are appended after today's existing tasks.
 - Carry-over **moves** tasks: the task's day changes to today, and no record of its original date is kept ([decision D1](#9-decisions-and-open-questions)).
 
@@ -111,11 +111,11 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 |---|---|---|
 | FR-M1 | Shows the current month on load, with previous/next controls, month and year pickers, and a "Today" button that opens today's day view. | ✅ |
 | FR-M2 | Each cell shows the date number, highlights today, and dims days outside the month. | ✅ |
-| FR-M3 | Each cell with tasks shows a done/total count, a progress bar, and up to 3 task previews. If there are more, it shows "+N more". | ⚠️ "+N more" is missing ([UX-10](tasks.md)) |
-| FR-M4 | A cell indicates that the day has a note. | ⬜ [UX-10](tasks.md) |
-| FR-M5 | Clicking a cell opens that day's view. | ✅ |
+| FR-M3 | Each cell with tasks shows a done/total count ("All done" once every task is finished), a progress bar, and up to 3 task previews. If there are more, it shows "+N more". On phones it shows a dot per task instead. | ✅ |
+| FR-M4 | A cell indicates that the day has a note. | ✅ |
+| FR-M5 | Clicking a cell opens that day's view. Cells are buttons: Tab reaches one, and the arrow keys, Home and End move between them. | ✅ |
 | FR-M6 | Data for every visible cell, including leading and trailing days from adjacent months, is loaded. | ✅ |
-| FR-M7 | The current month and selected day are reflected in the URL, so refresh, back/forward and deep links work. | ⬜ [UX-07](tasks.md) |
+| FR-M7 | The current month and selected day are reflected in the URL (`/?day=yyyy-MM-dd&month=yyyy-MM`), so refresh, back/forward and deep links work. The day view's back button goes back in history when the month view is behind it. | ✅ |
 
 ### 4.3 Day view
 
@@ -123,28 +123,28 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 |---|---|---|
 | FR-D1 | Shows the weekday and full date, and a back button to the month view. | ✅ |
 | FR-D2 | Shows the task list, a completion percentage and a progress bar. | ✅ |
-| FR-D3 | An empty day shows an empty state with an "Add Task" action. | ✅ |
-| FR-D4 | Shows an editable note for the day (max 500 chars). Changes are saved automatically and are never lost or overwritten by stale state. | ⚠️ Saved on blur, not automatically yet ([UX-09](tasks.md)) |
+| FR-D3 | A day without tasks shows an empty state, worded for a past day, today or a future day, with an "Add Task" action. The note stays available. | ✅ |
+| FR-D4 | Shows an editable note for the day (max 500 chars). Changes are saved automatically (shortly after typing stops, on blur, and on leaving the day), with a Saving…/Saved indicator, and are never lost or overwritten by stale state. | ✅ |
 
 ### 4.4 Tasks
 
 | ID | Requirement | Status |
 |---|---|---|
-| FR-T1 | Add a task with a description and priority. Enter submits, Escape cancels, and Submit is disabled while the description is empty. | ⚠️ [UX-03](tasks.md) |
+| FR-T1 | Add a task with a description and priority. Enter submits, Escape cancels, and Submit is disabled while the description is empty or a save is in flight. | ✅ |
 | FR-T2 | Edit a task's description and priority. | ✅ |
 | FR-T3 | Toggle a task finished or unfinished. | ✅ |
-| FR-T4 | Delete a task, with a confirmation or an undo. | ⚠️ Deletes without confirmation ([UX-02](tasks.md)) |
-| FR-T5 | Reorder tasks by drag and drop, and by keyboard. The new order shows immediately and is persisted. | ⚠️ Not optimistic ([UX-04](tasks.md)) |
-| FR-T6 | All task actions are usable on touch devices. They are not hover-only. | ⚠️ [UX-05](tasks.md) |
-| FR-T7 | Failed actions show a visible error and leave the UI consistent with the server. | ⚠️ Errors only go to the console ([UX-01](tasks.md)) |
+| FR-T4 | Delete a task, with an undo: the task disappears at once, and the delete is sent after 5 seconds unless "Undo" is pressed. | ✅ |
+| FR-T5 | Reorder tasks by drag and drop, and by keyboard. The new order shows immediately and is persisted, and goes back if the server rejects it. | ✅ |
+| FR-T6 | All task actions are usable on touch devices. They are not hover-only. | ✅ |
+| FR-T7 | Failed actions show a visible error (a toast, or the message next to the field for a 422) and leave the UI consistent with the server. | ✅ |
 
 ### 4.5 Carry-over
 
 | ID | Requirement | Status |
 |---|---|---|
 | FR-C1 | Prompt to carry over unfinished past tasks, following the rules in [3.5](#35-carry-over). | ✅ |
-| FR-C2 | The user can choose which tasks to carry over. | ⬜ [UX-08](tasks.md) |
-| FR-C3 | Dismissing the prompt suppresses it until the next day. | ⬜ [UX-08](tasks.md) |
+| FR-C2 | The user can choose which tasks to carry over. | ✅ |
+| FR-C3 | Dismissing the prompt suppresses it until the next day. | ✅ |
 
 ---
 
@@ -245,12 +245,13 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 
 ## 7. Frontend architecture
 
-- **Single page.** `HomeController@index` renders the `home` Inertia page with a single `weekStartsOn` prop. After that, all data goes through the JSON API above.
-- [resources/js/pages/home.tsx](resources/js/pages/home.tsx) holds the visible month and the selected day, and switches between the month view (`CalendarHeader` + `MonthGrid` of `DayCell`s) and `DayView`.
+- **Single page.** `HomeController@index` renders the `home` Inertia page with the props `weekStartsOn`, `month` and `day` (the last two from the query string, null when absent or invalid). After that, all data goes through the JSON API above.
+- [resources/js/pages/home.tsx](resources/js/pages/home.tsx) reads the visible month and the selected day from the URL props, changes them with Inertia's client-side `router.push`/`replace`, and switches between the month view (`CalendarHeader` + `MonthGrid` of `DayCell`s) and `DayView`.
 - **Data layer: TanStack Query** ([decision D5](#9-decisions-and-open-questions)). [resources/js/lib/calendar-api.ts](resources/js/lib/calendar-api.ts) holds the query keys and one axios function per endpoint. Each month's `CalendarData` is its own query (`['calendar', 'yyyy-MM']`), cached and refetched in the background when shown again or when the window regains focus.
 - [resources/js/hooks/use-calendar.ts](resources/js/hooks/use-calendar.ts) reads the visible month's query, fetches the carry-over candidates from `GET /api/tasks/unfinished` whenever the month view is shown, and carries tasks over (then invalidates every cached month).
 - [resources/js/components/day-panel-content.tsx](resources/js/components/day-panel-content.tsx) renders a day: tasks (dnd-kit sortable), add/edit dialogs and the note.
-- [resources/js/hooks/useTaskActions.ts](resources/js/hooks/useTaskActions.ts) runs the per-day mutations (`useMutation`) and, once the server confirms, patches the visible month's cached query through `updateData(prev => next)`. It does not fetch again.
+- [resources/js/hooks/useTaskActions.ts](resources/js/hooks/useTaskActions.ts) runs the per-day mutations (`useMutation`) and, once the server confirms, patches the visible month's cached query through `updateData(prev => next)`. It does not fetch again. Reordering is optimistic, and deletes wait out an undo toast first. The note autosaves through [use-note-autosave.ts](resources/js/hooks/use-note-autosave.ts).
+- **Errors:** [resources/js/lib/query-client.ts](resources/js/lib/query-client.ts) shows a toast for any failed query or mutation (titled by its `meta.errorMessage`) and refetches the calendar after a failed mutation. The task dialog shows 422 messages next to its fields.
 - Priority labels and styles live in [resources/js/constants/priority.ts](resources/js/constants/priority.ts).
 - Wayfinder generates typed route helpers (`resources/js/routes`, `resources/js/actions`, gitignored). Every page uses them, including the calendar and task code's axios calls.
 

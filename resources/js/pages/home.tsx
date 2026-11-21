@@ -125,7 +125,6 @@ export default function Home() {
         try {
             await axios.post('/api/tasks/carry-over', {
                 tasks: carryOverTasks,
-                calendar_day_id: todaysCalendarDayId,
             });
 
             setOpenUnfinishedTasksDialog(false);

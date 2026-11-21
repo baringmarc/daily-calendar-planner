@@ -193,7 +193,7 @@ Planned additions: `User → hasManyThrough Task`, `CalendarDay → belongsTo Us
 All endpoints require an authenticated, verified session (`auth` + `verified` middleware). They return JSON and are called from the frontend with axios.
 
 ### 6.1 Rules that apply to every endpoint
-- **Authorization:** a user can only read or modify their own calendar days and tasks. Any request touching another user's resource gets **403** (or **404**), and nothing changes. Bulk endpoints (reorder, carry-over) must reject the whole request if any id is not owned by the user. ⚠️ Not enforced today ([SEC-01](tasks.md))
+- **Authorization:** a user can only read or modify their own calendar days and tasks. Any request touching another user's resource gets **403** (or **404**), and nothing changes. Bulk endpoints (reorder, carry-over) must reject the whole request if any id is not owned by the user. Enforced by `TaskPolicy`, `CalendarDayPolicy` and ownership checks in `TaskService` ([SEC-01](tasks.md)).
 - **Validation:** invalid input returns **422** with Laravel's standard error body. It never returns a 500. ⚠️ [BUG-06](tasks.md)
 - **Dates** are `YYYY-MM-DD` strings. Months are `YYYY-MM`.
 
@@ -236,7 +236,7 @@ Body: `{ note: string|null (≤500) }`. **200** with the day.
 Body: `{ tasks: [{ id }, ...] }`, all from the same calendar day and in the new order. Rewrites `order` as `1..n`. **200**.
 
 #### `POST /api/tasks/carry-over`
-Current body: `{ tasks: { [date]: Task[] }, calendar_day_id: number|null }`. If `calendar_day_id` is null, today's day is found or created.
+Current body: `{ tasks: { [date]: Task[] } }`. The tasks move to the user's day for today, which the server finds or creates. **403** if any task isn't the user's.
 
 Target contract ([BUG-05](tasks.md), [DEBT-03](tasks.md)): `{ task_ids: number[] }`. The server resolves "today" itself, checks that every task is owned by the user, unfinished and dated before today, and appends the tasks to today. **200** with the moved tasks.
 

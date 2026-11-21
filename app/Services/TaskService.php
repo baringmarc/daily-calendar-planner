@@ -4,7 +4,10 @@ namespace App\Services;
 
 use App\Models\CalendarDay;
 use App\Models\Task;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class TaskService
@@ -36,52 +39,72 @@ class TaskService
         });
     }
 
-    public function carryOverTasks(array $taskIds, $targetCalendarDayId)
+    /**
+     * Move the given tasks to the user's calendar day for today.
+     *
+     * The target day is always resolved on the server. The whole request is
+     * rejected if any of the ids doesn't belong to the user.
+     */
+    public function carryOverTasks(User $user, array $taskIds)
     {
-        return DB::transaction(function () use ($taskIds, $targetCalendarDayId) {
-            if (! $targetCalendarDayId) {
-                // If no target day is provided, create/find today's calendar day
-                $today = Carbon::now('Asia/Manila')->format('Y-m-d');
-                $targetDay = CalendarDay::firstOrCreate([
-                    'user_id' => auth()->id(),
-                    'date' => $today,
-                ]);
+        return DB::transaction(function () use ($user, $taskIds) {
+            $this->ensureUserOwnsTasks($user, $taskIds);
 
-                $targetCalendarDayId = $targetDay->id;
-            }
+            $today = Carbon::now('Asia/Manila')->format('Y-m-d');
+            $targetDay = CalendarDay::firstOrCreate([
+                'user_id' => $user->id,
+                'date' => $today,
+            ]);
 
-            return Task::whereIn('id', $taskIds)
-                ->update(['calendar_day_id' => $targetCalendarDayId]);
+            return $this->tasksOwnedBy($user)
+                ->whereIn('id', $taskIds)
+                ->update(['calendar_day_id' => $targetDay->id]);
         });
     }
 
-    public function reorderTasks($tasks)
+    /**
+     * Rewrite `order` as 1..n following the given task order.
+     *
+     * The whole request is rejected if any of the ids doesn't belong to the user.
+     */
+    public function reorderTasks(User $user, array $tasks)
     {
         if (empty($tasks)) {
             return [];
         }
 
-        $orderedTasks = [];
-        foreach ($tasks as $index => $task) {
-            $orderedTasks[] = [
-                'id' => $task['id'],
-                'order' => $index + 1,
-            ];
-        }
+        $taskIds = array_map(fn ($task) => $task['id'], $tasks);
 
-        return $this->bulkUpdate($orderedTasks);
-    }
+        return DB::transaction(function () use ($user, $taskIds) {
+            $this->ensureUserOwnsTasks($user, $taskIds);
 
-    public function bulkUpdate(array $tasks)
-    {
-        return DB::transaction(function () use ($tasks) {
-            foreach ($tasks as $taskData) {
-                $task = Task::find($taskData['id']);
-
-                if ($task) {
-                    $task->update($taskData);
-                }
+            foreach ($taskIds as $index => $taskId) {
+                $this->tasksOwnedBy($user)
+                    ->whereKey($taskId)
+                    ->update(['order' => $index + 1]);
             }
         });
+    }
+
+    /**
+     * @throws AuthorizationException when any of the ids isn't one of the user's tasks
+     */
+    private function ensureUserOwnsTasks(User $user, array $taskIds): void
+    {
+        $taskIds = array_unique($taskIds);
+
+        $ownedCount = $this->tasksOwnedBy($user)->whereIn('id', $taskIds)->count();
+
+        if ($ownedCount !== count($taskIds)) {
+            throw new AuthorizationException('This action is unauthorized.');
+        }
+    }
+
+    private function tasksOwnedBy(User $user): Builder
+    {
+        return Task::query()->whereHas(
+            'calendarDay',
+            fn (Builder $query) => $query->where('user_id', $user->id),
+        );
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
 use App\Services\TaskService;
+use Illuminate\Support\Facades\Gate;
 
 class TaskController extends Controller
 {
@@ -61,6 +62,8 @@ class TaskController extends Controller
      */
     public function update(UpdateTaskRequest $request, Task $task)
     {
+        Gate::authorize('update', $task);
+
         $task->update($request->validated());
 
         return response()->json($task, 200);
@@ -71,6 +74,8 @@ class TaskController extends Controller
      */
     public function destroy(Task $task)
     {
+        Gate::authorize('delete', $task);
+
         $task->delete();
 
         return response()->json(['message' => 'Task deleted successfully'], 200);
@@ -85,17 +90,15 @@ class TaskController extends Controller
             return response()->json(['message' => 'Invalid tasks data'], 400);
         }
 
-        $tasks = $request->input('tasks');
-        $updatedTasks = [];
-        $todayCalendarDayId = $request->input('calendar_day_id') ?? null;
+        $taskIds = [];
 
-        foreach ($tasks as $day) {
+        foreach ($request->input('tasks') as $day) {
             foreach ($day as $task) {
                 $taskIds[] = $task['id'];
             }
         }
 
-        $updatedTasks = $taskService->carryOverTasks($taskIds, $todayCalendarDayId);
+        $updatedTasks = $taskService->carryOverTasks($request->user(), $taskIds);
 
         return response()->json($updatedTasks, 200);
     }
@@ -108,8 +111,7 @@ class TaskController extends Controller
             return response()->json(['message' => 'Invalid tasks data'], 400);
         }
 
-        $tasks = $request->input('tasks');
-        $updatedTasks = $taskService->reorderTasks($tasks);
+        $updatedTasks = $taskService->reorderTasks($request->user(), $request->input('tasks'));
 
         return response()->json($updatedTasks, 200);
     }

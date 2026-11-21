@@ -54,7 +54,7 @@ Business logic lives in `app/Services/TaskService.php`, and controllers create i
 **Authorization.** `TaskPolicy` (ownership through `calendarDay.user_id`) and `CalendarDayPolicy` are checked with `Gate::authorize()` in the controllers' `update`/`destroy`. The bulk endpoints check ownership in `TaskService`: `reorderTasks`/`carryOverTasks` throw `AuthorizationException` (403) if any id isn't the user's, and only touch the user's tasks. The Form Requests' `authorize()` methods only check `Auth::check()`, so any new endpoint must authorize explicitly.
 
 **Known gaps (check before relying on them):**
-- No tests cover the tasks or the calendar yet. `tests/` contains only the starter kit's auth and settings tests.
+- The only domain tests are the cross-user authorization tests in `tests/Feature/AuthorizationTest.php`. Task CRUD, notes, reorder, carry-over and the calendar range have no behaviour tests yet (DEBT-01). `CalendarDayFactory` and `TaskFactory` exist but have no states, and `CalendarDay` has no `user()` relation yet, so pass `user_id` explicitly instead of `->for($user)`.
 
 <laravel-boost-guidelines>
 === foundation rules ===

@@ -61,8 +61,11 @@ export function DayPanelContent({
         setNewTask,
         isAddingTask,
         setIsAddingTask,
+        openAddTask,
         currentEditTask,
         setCurrentEditTask,
+        addTaskErrors,
+        editTaskErrors,
         // - task actions
         updateNotes,
         handleAddTask,
@@ -128,7 +131,7 @@ export function DayPanelContent({
                 </div>
 
                 <Button
-                    onClick={() => setIsAddingTask(true)}
+                    onClick={() => openAddTask(true)}
                     className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
                 >
                     <Plus className="h-4 w-4" />
@@ -148,10 +151,11 @@ export function DayPanelContent({
         <div className="space-y-10 pb-10">
             <AddTaskDialog
                 open={isAddingTask}
-                onOpenChange={setIsAddingTask}
+                onOpenChange={openAddTask}
                 newTask={newTask}
                 setNewTask={setNewTask}
                 handleAddTask={handleAddTask}
+                errors={addTaskErrors}
             />
 
             <EditTaskDialog
@@ -160,6 +164,7 @@ export function DayPanelContent({
                 currentEditTask={currentEditTask}
                 setCurrentEditTask={setCurrentEditTask}
                 handleEditTask={handleEditTask}
+                errors={editTaskErrors}
             />
             {/* tasks Section */}
             <section className="space-y-5">
@@ -224,7 +229,7 @@ export function DayPanelContent({
 
                 {!isAddingTask && !currentEditTask && (
                     <Button
-                        onClick={() => setIsAddingTask(true)}
+                        onClick={() => openAddTask(true)}
                         className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
                     >
                         <Plus className="h-4 w-4" />

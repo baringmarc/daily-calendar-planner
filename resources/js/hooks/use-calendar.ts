@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import {
     carryOverTasks,
     fetchCalendarMonth,
@@ -54,6 +55,7 @@ export function useCalendar({
         // Keep showing the previous month (under the spinner) while the next
         // one loads, rather than an empty grid.
         placeholderData: keepPreviousData,
+        meta: { errorMessage: "Couldn't load the calendar" },
     });
 
     const unfinishedQuery = useQuery({
@@ -63,6 +65,7 @@ export function useCalendar({
         // Refetched on every return to the month view instead. On focus it
         // would reopen a dialog the user just dismissed.
         refetchOnWindowFocus: false,
+        meta: { errorMessage: "Couldn't check for unfinished tasks" },
     });
 
     // The dialog is open for one fetch of the unfinished tasks: dismissing it
@@ -88,8 +91,13 @@ export function useCalendar({
                     .flat()
                     .map((task) => task.id),
             ),
-        onSuccess: () => {
+        onSuccess: (moved) => {
             queryClient.setQueryData(queryKeys.unfinishedTasks, {});
+            toast.success(
+                moved.length === 1
+                    ? 'Moved 1 task to today'
+                    : `Moved ${moved.length} tasks to today`,
+            );
 
             // The tasks left their old days for today, which may be in any
             // cached month.
@@ -97,9 +105,7 @@ export function useCalendar({
                 queryKey: queryKeys.calendar,
             });
         },
-        onError: (error) => {
-            console.log('Error carrying over tasks:', error);
-        },
+        meta: { errorMessage: "Couldn't carry the tasks over" },
     });
 
     const calendar = monthQuery.data ?? EMPTY_CALENDAR;

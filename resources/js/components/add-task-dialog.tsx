@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import InputError from '@/components/input-error';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PRIORITY_DEFAULT, PRIORITY_MAP } from '@/constants/priority';
 import type { Priority } from '@/constants/priority';
+import type { ValidationErrors } from '@/lib/errors';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 
@@ -20,12 +22,14 @@ export function AddTaskDialog({
     newTask,
     setNewTask,
     handleAddTask,
+    errors,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     newTask: string;
     setNewTask: (task: string) => void;
     handleAddTask: (task: string, priority: Priority) => Promise<void>;
+    errors: ValidationErrors;
 }) {
     const [priority, setPriority] = useState<Priority>(PRIORITY_DEFAULT);
 
@@ -43,7 +47,9 @@ export function AddTaskDialog({
                     placeholder="What needs to be done?"
                     className="h-11 border-none bg-muted/20 pr-12 focus-visible:ring-1 focus-visible:ring-accent"
                     autoFocus={true}
+                    aria-invalid={!!errors.description}
                 />
+                <InputError message={errors.description} />
 
                 <div className="mt-1 flex gap-2">
                     {PRIORITY_MAP.map((p) => (
@@ -65,6 +71,7 @@ export function AddTaskDialog({
                         </button>
                     ))}
                 </div>
+                <InputError message={errors.priority} />
 
                 <AlertDialogFooter className="mt-5">
                     <AlertDialogCancel onClick={() => onOpenChange(false)}>

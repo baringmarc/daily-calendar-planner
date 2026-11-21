@@ -1,3 +1,4 @@
+import InputError from '@/components/input-error';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -9,6 +10,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PRIORITY_MAP } from '@/constants/priority';
+import type { ValidationErrors } from '@/lib/errors';
 import { cn } from '@/lib/utils';
 import type { Task } from '@/types';
 import { Input } from './ui/input';
@@ -19,12 +21,14 @@ export function EditTaskDialog({
     currentEditTask,
     setCurrentEditTask,
     handleEditTask,
+    errors,
 }: {
     open: boolean;
     onOpenChange: (task: Task | null) => void;
     currentEditTask: Task | null;
     setCurrentEditTask: React.Dispatch<React.SetStateAction<Task | null>>;
     handleEditTask: (task: Task | null) => Promise<void>;
+    errors: ValidationErrors;
 }) {
     return (
         <AlertDialog open={open}>
@@ -50,7 +54,9 @@ export function EditTaskDialog({
                     }
                     className="h-11 border-none bg-muted/20 pr-12 focus-visible:ring-1 focus-visible:ring-accent"
                     autoFocus={true}
+                    aria-invalid={!!errors.description}
                 />
+                <InputError message={errors.description} />
 
                 <div className="mt-1 flex gap-2">
                     {PRIORITY_MAP.map((p) => (
@@ -83,6 +89,7 @@ export function EditTaskDialog({
                         </button>
                     ))}
                 </div>
+                <InputError message={errors.priority} />
 
                 <AlertDialogFooter className="mt-5">
                     <AlertDialogCancel onClick={() => onOpenChange(null)}>

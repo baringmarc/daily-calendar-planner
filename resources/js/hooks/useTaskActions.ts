@@ -10,6 +10,7 @@ import {
     updateCalendarDay,
     updateTask,
 } from '@/lib/calendar-api';
+import { validationErrors } from '@/lib/errors';
 import type { DayData, Task } from '@/types';
 
 /**
@@ -46,7 +47,7 @@ export function useTaskActions({
                 : createCalendarDay({ date: dateKey, note }),
         onSuccess: (day) =>
             updateData((prev) => ({ ...prev, calendar_day: day })),
-        onError: () => console.error('Failed to update notes'),
+        meta: { errorMessage: "Couldn't save the note" },
     });
 
     const addTask = useMutation({
@@ -56,7 +57,7 @@ export function useTaskActions({
             setNewTask('');
             setIsAddingTask(false);
         },
-        onError: () => console.error('Failed to add task'),
+        meta: { errorMessage: "Couldn't add the task", inlineValidation: true },
     });
 
     const removeTask = useMutation({
@@ -70,7 +71,7 @@ export function useTaskActions({
                 ...prev,
                 tasks: prev.tasks.filter((t) => t.id !== id),
             })),
-        onError: () => console.error('Failed to delete task'),
+        meta: { errorMessage: "Couldn't delete the task" },
     });
 
     const toggleFinished = useMutation({
@@ -82,7 +83,7 @@ export function useTaskActions({
             is_finished: boolean;
         }) => updateTask(id, { is_finished }),
         onSuccess: replaceTask,
-        onError: () => console.error('Failed to update task'),
+        meta: { errorMessage: "Couldn't update the task" },
     });
 
     const editTask = useMutation({
@@ -95,7 +96,10 @@ export function useTaskActions({
             replaceTask(task);
             setCurrentEditTask(null);
         },
-        onError: () => console.error('Failed to update task'),
+        meta: {
+            errorMessage: "Couldn't save the task",
+            inlineValidation: true,
+        },
     });
 
     const reorder = useMutation({
@@ -105,7 +109,7 @@ export function useTaskActions({
             return tasks;
         },
         onSuccess: (tasks) => updateData((prev) => ({ ...prev, tasks })),
-        onError: () => console.error('Failed to reorder tasks'),
+        meta: { errorMessage: "Couldn't reorder the tasks" },
     });
 
     // Returns whether the note is now saved.
@@ -139,8 +143,15 @@ export function useTaskActions({
         toggleFinished.mutate({ id, is_finished });
     };
 
+    // Opening or closing a dialog clears the last attempt's errors.
+    const openAddTask = (open: boolean) => {
+        addTask.reset();
+        setIsAddingTask(open);
+    };
+
     // toggle edit mode (opens edit modal)
     const toggleEditTask = (task: Task | null) => {
+        editTask.reset();
         setIsAddingTask(false);
         setCurrentEditTask(task);
     };
@@ -160,8 +171,12 @@ export function useTaskActions({
         setNewTask,
         isAddingTask,
         setIsAddingTask,
+        openAddTask,
         currentEditTask,
         setCurrentEditTask,
+        // 422 messages for the add and edit dialogs, by field
+        addTaskErrors: validationErrors(addTask.error),
+        editTaskErrors: validationErrors(editTask.error),
         // actions
         updateNotes,
         handleAddTask,

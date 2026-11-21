@@ -250,7 +250,7 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 - [resources/js/components/day-panel-content.tsx](resources/js/components/day-panel-content.tsx) renders a day: tasks (dnd-kit sortable), add/edit dialogs and the note.
 - [resources/js/hooks/useTaskActions.ts](resources/js/hooks/useTaskActions.ts) makes the per-day API calls and patches local state through `updateData(prev => next)`. It does not fetch again.
 - Priority labels and styles live in [resources/js/constants/priority.ts](resources/js/constants/priority.ts).
-- Wayfinder generates typed route helpers (`resources/js/routes`, `resources/js/actions`, gitignored). Auth and settings pages use them. The calendar and task code should too ([DEBT-06](tasks.md)).
+- Wayfinder generates typed route helpers (`resources/js/routes`, `resources/js/actions`, gitignored). Every page uses them, including the calendar and task code's axios calls.
 
 ---
 

@@ -18,6 +18,8 @@ import type { Day } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import HomeController from '@/actions/App/Http/Controllers/HomeController';
+import TaskController from '@/actions/App/Http/Controllers/TaskController';
 import { DayPanelContent } from '@/components/day-panel-content';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -93,9 +95,11 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
         setIsLoading(true);
 
         try {
-            const res = await axios.get('/api/calendar', {
-                params: { month: format(date, 'yyyy-MM') },
-            });
+            const res = await axios.get(
+                HomeController.calendar.url({
+                    query: { month: format(date, 'yyyy-MM') },
+                }),
+            );
 
             setCalendar(res.data.calendarData || {});
         } catch (error) {
@@ -108,7 +112,7 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     // - unfinished tasks from days before today, across all months
     const fetchUnfinishedTasks = useCallback(async () => {
         try {
-            const res = await axios.get('/api/tasks/unfinished');
+            const res = await axios.get(TaskController.unfinished.url());
 
             setUnfinishedTasks(res.data.unfinishedTasks || {});
         } catch (error) {
@@ -135,7 +139,7 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
 
     const carryOverTasks = async (carryOverTasks: UnfinishedTasks) => {
         try {
-            await axios.post('/api/tasks/carry-over', {
+            await axios.post(TaskController.carryOverTasks.url(), {
                 task_ids: Object.values(carryOverTasks)
                     .flat()
                     .map((task) => task.id),

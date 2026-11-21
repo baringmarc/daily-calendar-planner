@@ -10,6 +10,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import axios from 'axios';
 import { AlignLeft, CalendarIcon, CheckSquare, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import TaskController from '@/actions/App/Http/Controllers/TaskController';
 import { AddTaskDialog } from '@/components/add-task-dialog';
 import { EditTaskDialog } from '@/components/edit-task-dialog';
 import { SortableTask } from '@/components/sortable-task';
@@ -102,8 +103,8 @@ export function DayPanelContent({
 
     const updateTaskOrder = async (tasks: Task[]) => {
         try {
-            const res = await axios.put(`api/tasks/reorder`, {
-                tasks: tasks,
+            const res = await axios.put(TaskController.reorder.url(), {
+                tasks: tasks.map((task) => ({ id: task.id })),
             });
 
             if (res.status !== 200) {

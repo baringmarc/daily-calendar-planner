@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import CalendarDayController from '@/actions/App/Http/Controllers/CalendarDayController';
+import TaskController from '@/actions/App/Http/Controllers/TaskController';
 import type { Priority } from '@/constants/priority';
 import type { DayData, Task } from '@/types';
 
@@ -27,10 +29,13 @@ export function useTaskActions({
 
         try {
             if (!dayData?.calendar_day?.id) {
-                const res = await axios.post('/calendar-days', {
-                    date: dateKey,
-                    note,
-                });
+                const res = await axios.post(
+                    CalendarDayController.store.url(),
+                    {
+                        date: dateKey,
+                        note,
+                    },
+                );
 
                 if (res.status !== 201) {
                     throw new Error();
@@ -42,7 +47,7 @@ export function useTaskActions({
                 }));
             } else {
                 const res = await axios.put(
-                    `/calendar-days/${dayData.calendar_day.id}`,
+                    CalendarDayController.update.url(dayData.calendar_day.id),
                     { note },
                 );
 
@@ -76,7 +81,7 @@ export function useTaskActions({
         const dateKey = format(date, 'yyyy-MM-dd');
 
         try {
-            const res = await axios.post('/tasks', {
+            const res = await axios.post(TaskController.store.url(), {
                 description: task.trim(),
                 date: dateKey,
                 is_finished: false,
@@ -102,7 +107,7 @@ export function useTaskActions({
     // DELETE task
     const handleDeleteTask = async (id: number) => {
         try {
-            const res = await axios.delete(`/tasks/${id}`);
+            const res = await axios.delete(TaskController.destroy.url(id));
 
             if (res.status !== 200) {
                 throw new Error();
@@ -120,7 +125,9 @@ export function useTaskActions({
     // - check off task
     const toggleFinishTask = async (id: number, is_finished: boolean) => {
         try {
-            const res = await axios.put(`/tasks/${id}`, { is_finished });
+            const res = await axios.put(TaskController.update.url(id), {
+                is_finished,
+            });
 
             if (res.status !== 200) {
                 throw new Error();
@@ -150,7 +157,7 @@ export function useTaskActions({
         }
 
         try {
-            const res = await axios.put(`/tasks/${task.id}`, {
+            const res = await axios.put(TaskController.update.url(task.id), {
                 description: task.description,
                 priority: task.priority,
             });

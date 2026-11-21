@@ -247,9 +247,10 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 
 - **Single page.** `HomeController@index` renders the `home` Inertia page with a single `weekStartsOn` prop. After that, all data goes through the JSON API above.
 - [resources/js/pages/home.tsx](resources/js/pages/home.tsx) holds the visible month and the selected day, and switches between the month view (`CalendarHeader` + `MonthGrid` of `DayCell`s) and `DayView`.
-- [resources/js/hooks/use-calendar.ts](resources/js/hooks/use-calendar.ts) owns `calendar: CalendarData`, fetches again when the month changes, fetches the carry-over candidates from `GET /api/tasks/unfinished` whenever the month view is shown, and carries tasks over.
+- **Data layer: TanStack Query** ([decision D5](#9-decisions-and-open-questions)). [resources/js/lib/calendar-api.ts](resources/js/lib/calendar-api.ts) holds the query keys and one axios function per endpoint. Each month's `CalendarData` is its own query (`['calendar', 'yyyy-MM']`), cached and refetched in the background when shown again or when the window regains focus.
+- [resources/js/hooks/use-calendar.ts](resources/js/hooks/use-calendar.ts) reads the visible month's query, fetches the carry-over candidates from `GET /api/tasks/unfinished` whenever the month view is shown, and carries tasks over (then invalidates every cached month).
 - [resources/js/components/day-panel-content.tsx](resources/js/components/day-panel-content.tsx) renders a day: tasks (dnd-kit sortable), add/edit dialogs and the note.
-- [resources/js/hooks/useTaskActions.ts](resources/js/hooks/useTaskActions.ts) makes the per-day API calls and patches local state through `updateData(prev => next)`. It does not fetch again.
+- [resources/js/hooks/useTaskActions.ts](resources/js/hooks/useTaskActions.ts) runs the per-day mutations (`useMutation`) and, once the server confirms, patches the visible month's cached query through `updateData(prev => next)`. It does not fetch again.
 - Priority labels and styles live in [resources/js/constants/priority.ts](resources/js/constants/priority.ts).
 - Wayfinder generates typed route helpers (`resources/js/routes`, `resources/js/actions`, gitignored). Every page uses them, including the calendar and task code's axios calls.
 
@@ -279,6 +280,7 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 | D1 | Carry-over **moves** tasks to today. No history of the original date is kept. | Current behaviour stays. FEAT-08 (carry-over history) is not planned. |
 | D2 | Weeks start on **Monday**. | The grid and weekday headers switch to Mon → Sun (BUG-02). FEAT-01 defaults to Monday. |
 | D3 | New tasks default to **Medium** priority. | The add dialog changes from Low to Medium (DEBT-05). |
+| D5 | The data layer is **TanStack Query** (answers Q5). | Each month is a cached query refetched on focus, and mutations go through `useMutation`, which makes rollback (UX-01) and optimistic reordering (UX-04) straightforward (DEBT-08). |
 | D4 | First features after the fixes: **move/snooze a task** (FEAT-02), **recurring tasks** (FEAT-09), **week view** (FEAT-10). | These are next once phases 0–4 are done. |
 
 ### Open questions
@@ -286,4 +288,3 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 | # | Question | Options / notes |
 |---|---|---|
 | Q3 | Where should the time zone come from? | Browser-detected and saved on the user (proposed), or chosen in settings. BUG-04 uses the browser's zone per request for now; storing it is FEAT-01. |
-| Q5 | Should the data layer stay as axios + local state, or move to TanStack Query / Inertia partial reloads? | See DEBT-08. |

@@ -1,4 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ThemeProvider } from 'next-themes';
@@ -7,12 +8,15 @@ import { createRoot } from 'react-dom/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import '../css/app.css';
 import { initializeTheme } from '@/hooks/use-appearance';
+import { createQueryClient } from '@/lib/query-client';
 
 // Lets the server work out "today" in the user's time zone (App\Support\UserClock).
 axios.defaults.headers.common['X-Timezone'] =
     Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+const queryClient = createQueryClient();
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
@@ -26,15 +30,17 @@ createInertiaApp({
 
         root.render(
             <StrictMode>
-                <TooltipProvider delayDuration={0}>
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme="system"
-                        enableSystem
-                    >
-                        <App {...props} />
-                    </ThemeProvider>
-                </TooltipProvider>
+                <QueryClientProvider client={queryClient}>
+                    <TooltipProvider delayDuration={0}>
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme="system"
+                            enableSystem
+                        >
+                            <App {...props} />
+                        </ThemeProvider>
+                    </TooltipProvider>
+                </QueryClientProvider>
             </StrictMode>,
         );
     },

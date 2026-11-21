@@ -7,15 +7,13 @@ import {
 } from '@dnd-kit/sortable';
 import { arrayMove } from '@dnd-kit/sortable';
 
-import axios from 'axios';
 import { AlignLeft, CalendarIcon, CheckSquare, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import TaskController from '@/actions/App/Http/Controllers/TaskController';
 import { AddTaskDialog } from '@/components/add-task-dialog';
 import { EditTaskDialog } from '@/components/edit-task-dialog';
 import { SortableTask } from '@/components/sortable-task';
 import { useTaskActions } from '@/hooks/useTaskActions';
-import type { DayData, Task } from '@/types';
+import type { DayData } from '@/types';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Textarea } from './ui/textarea';
@@ -72,6 +70,7 @@ export function DayPanelContent({
         toggleFinishTask,
         toggleEditTask,
         handleEditTask,
+        updateTaskOrder,
     } = useTaskActions({
         date,
         dayData,
@@ -99,25 +98,6 @@ export function DayPanelContent({
 
         setActiveId(null);
         updateTaskOrder(newTasks);
-    };
-
-    const updateTaskOrder = async (tasks: Task[]) => {
-        try {
-            const res = await axios.put(TaskController.reorder.url(), {
-                tasks: tasks.map((task) => ({ id: task.id })),
-            });
-
-            if (res.status !== 200) {
-                throw new Error();
-            }
-
-            updateData((prev) => ({
-                ...prev,
-                tasks: tasks,
-            }));
-        } catch {
-            console.error('Failed to reorder tasks');
-        }
     };
 
     // Reset local state when date changes

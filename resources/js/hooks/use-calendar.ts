@@ -1,8 +1,17 @@
-import axios from 'axios';
+import {
+    keepPreviousData,
+    useMutation,
+    useQuery,
+    useQueryClient,
+} from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useCallback, useEffect, useState } from 'react';
-import HomeController from '@/actions/App/Http/Controllers/HomeController';
-import TaskController from '@/actions/App/Http/Controllers/TaskController';
+import { useState } from 'react';
+import {
+    carryOverTasks,
+    fetchCalendarMonth,
+    fetchUnfinishedTasks,
+    queryKeys,
+} from '@/lib/calendar-api';
 import type { CalendarData, DayData, UnfinishedTasks } from '@/types';
 
 // Shared by every day without saved data, so it keeps the same identity
@@ -15,15 +24,19 @@ export const EMPTY_DAY_DATA: DayData = {
     tasks: [],
 };
 
+const EMPTY_CALENDAR: CalendarData = {};
+const NO_UNFINISHED_TASKS: UnfinishedTasks = {};
+
 export const dayKey = (date: Date) => format(date, 'yyyy-MM-dd');
 
 /**
  * The calendar data for the visible month, and the carry-over prompt.
  *
- * Fetches the month whenever `currentDate` moves to another month, and the
- * unfinished tasks from earlier days whenever the month view is shown
- * (tasks may have been finished in the day view). A non-empty result opens
- * the carry-over dialog.
+ * Each month is its own query (`['calendar', 'yyyy-MM']`), so months you've
+ * visited are cached and refetched in the background when shown again or
+ * when the window regains focus. The unfinished tasks from earlier days are
+ * fetched whenever the month view is shown (tasks may have been finished in
+ * the day view), and a non-empty result opens the carry-over dialog.
  */
 export function useCalendar({
     currentDate,
@@ -32,92 +45,91 @@ export function useCalendar({
     currentDate: Date;
     isMonthView: boolean;
 }) {
-    const [calendar, setCalendar] = useState<CalendarData>({});
-    const [isLoading, setIsLoading] = useState(false);
-    const [unfinishedTasks, setUnfinishedTasks] = useState<UnfinishedTasks>({});
-    const [isCarryOverOpen, setIsCarryOverOpen] = useState(false);
-
+    const queryClient = useQueryClient();
     const monthKey = format(currentDate, 'yyyy-MM');
 
-    const fetchCalendar = useCallback(async (month: string) => {
-        setIsLoading(true);
+    const monthQuery = useQuery({
+        queryKey: queryKeys.calendarMonth(monthKey),
+        queryFn: () => fetchCalendarMonth(monthKey),
+        // Keep showing the previous month (under the spinner) while the next
+        // one loads, rather than an empty grid.
+        placeholderData: keepPreviousData,
+    });
 
-        try {
-            const res = await axios.get(
-                HomeController.calendar.url({ query: { month } }),
-            );
+    const unfinishedQuery = useQuery({
+        queryKey: queryKeys.unfinishedTasks,
+        queryFn: fetchUnfinishedTasks,
+        enabled: isMonthView,
+        // Refetched on every return to the month view instead. On focus it
+        // would reopen a dialog the user just dismissed.
+        refetchOnWindowFocus: false,
+    });
 
-            setCalendar(res.data.calendarData || {});
-        } catch (error) {
-            console.log('Error fetching calendar data:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+    // The dialog is open for one fetch of the unfinished tasks: dismissing it
+    // remembers which fetch, and the next one (on returning to the month
+    // view) opens it again.
+    const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+    const unfinishedTasks = unfinishedQuery.data ?? NO_UNFINISHED_TASKS;
+    const isCarryOverOpen =
+        isMonthView &&
+        Object.keys(unfinishedTasks).length > 0 &&
+        dismissedAt !== unfinishedQuery.dataUpdatedAt;
 
-    useEffect(() => {
-        fetchCalendar(monthKey);
-    }, [monthKey, fetchCalendar]);
-
-    useEffect(() => {
-        if (!isMonthView) {
-            return;
-        }
-
-        axios
-            .get(TaskController.unfinished.url())
-            .then((res) => {
-                const tasks: UnfinishedTasks = res.data.unfinishedTasks || {};
-
-                setUnfinishedTasks(tasks);
-
-                if (Object.keys(tasks).length > 0) {
-                    setIsCarryOverOpen(true);
-                }
-            })
-            .catch((error) => {
-                console.log('Error fetching unfinished tasks:', error);
-            });
-    }, [isMonthView]);
-
-    const carryOverTasks = async (tasks: UnfinishedTasks) => {
-        try {
-            await axios.post(TaskController.carryOverTasks.url(), {
-                task_ids: Object.values(tasks)
-                    .flat()
-                    .map((task) => task.id),
-            });
-
-            setIsCarryOverOpen(false);
-            setUnfinishedTasks({});
-            fetchCalendar(monthKey);
-        } catch (error) {
-            console.log('Error carrying over tasks:', error);
+    const setIsCarryOverOpen = (open: boolean) => {
+        if (!open) {
+            setDismissedAt(unfinishedQuery.dataUpdatedAt);
         }
     };
+
+    const carryOver = useMutation({
+        mutationFn: (tasks: UnfinishedTasks) =>
+            carryOverTasks(
+                Object.values(tasks)
+                    .flat()
+                    .map((task) => task.id),
+            ),
+        onSuccess: () => {
+            queryClient.setQueryData(queryKeys.unfinishedTasks, {});
+
+            // The tasks left their old days for today, which may be in any
+            // cached month.
+            return queryClient.invalidateQueries({
+                queryKey: queryKeys.calendar,
+            });
+        },
+        onError: (error) => {
+            console.log('Error carrying over tasks:', error);
+        },
+    });
+
+    const calendar = monthQuery.data ?? EMPTY_CALENDAR;
 
     const getDayData = (date: Date): DayData =>
         calendar[dayKey(date)] ?? EMPTY_DAY_DATA;
 
-    // Patches one day in local state, for the optimistic updates in
-    // useTaskActions.
+    // Patches one day in the visible month's cached data after a mutation.
+    // Other cached months are refetched when they're next shown.
     const updateDayData = (date: Date, updater: (prev: DayData) => DayData) => {
         const key = dayKey(date);
 
-        setCalendar((prev) => ({
-            ...prev,
-            [key]: updater(prev[key] ?? EMPTY_DAY_DATA),
-        }));
+        queryClient.setQueryData<CalendarData>(
+            queryKeys.calendarMonth(monthKey),
+            (prev = EMPTY_CALENDAR) => ({
+                ...prev,
+                [key]: updater(prev[key] ?? EMPTY_DAY_DATA),
+            }),
+        );
     };
 
     return {
         calendar,
-        isLoading,
+        // Only the first load of a month, not background refetches.
+        isLoading: monthQuery.isPending || monthQuery.isPlaceholderData,
         getDayData,
         updateDayData,
         unfinishedTasks,
         isCarryOverOpen,
         setIsCarryOverOpen,
-        carryOverTasks,
+        carryOverTasks: (tasks: UnfinishedTasks) => carryOver.mutate(tasks),
     };
 }

@@ -1,11 +1,21 @@
-import axios from 'axios';
+import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useState } from 'react';
-import CalendarDayController from '@/actions/App/Http/Controllers/CalendarDayController';
-import TaskController from '@/actions/App/Http/Controllers/TaskController';
 import type { Priority } from '@/constants/priority';
+import {
+    createCalendarDay,
+    createTask,
+    deleteTask,
+    reorderTasks,
+    updateCalendarDay,
+    updateTask,
+} from '@/lib/calendar-api';
 import type { DayData, Task } from '@/types';
 
+/**
+ * One day's mutations. Each one patches the cached calendar through
+ * `updateData` once the server confirms it, instead of fetching again.
+ */
 export function useTaskActions({
     date,
     dayData,
@@ -19,129 +29,114 @@ export function useTaskActions({
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [currentEditTask, setCurrentEditTask] = useState<Task | null>(null);
 
+    const dateKey = format(date, 'yyyy-MM-dd');
+
+    const replaceTask = (task: Task) =>
+        updateData((prev) => ({
+            ...prev,
+            tasks: prev.tasks.map((t) => (t.id === task.id ? task : t)),
+        }));
+
+    // A day row only exists once it has a task or a note, so the first note
+    // creates it.
+    const saveNote = useMutation({
+        mutationFn: (note: string) =>
+            dayData.calendar_day.id
+                ? updateCalendarDay(dayData.calendar_day.id, { note })
+                : createCalendarDay({ date: dateKey, note }),
+        onSuccess: (day) =>
+            updateData((prev) => ({ ...prev, calendar_day: day })),
+        onError: () => console.error('Failed to update notes'),
+    });
+
+    const addTask = useMutation({
+        mutationFn: createTask,
+        onSuccess: (task) => {
+            updateData((prev) => ({ ...prev, tasks: [...prev.tasks, task] }));
+            setNewTask('');
+            setIsAddingTask(false);
+        },
+        onError: () => console.error('Failed to add task'),
+    });
+
+    const removeTask = useMutation({
+        mutationFn: async (id: number) => {
+            await deleteTask(id);
+
+            return id;
+        },
+        onSuccess: (id) =>
+            updateData((prev) => ({
+                ...prev,
+                tasks: prev.tasks.filter((t) => t.id !== id),
+            })),
+        onError: () => console.error('Failed to delete task'),
+    });
+
+    const toggleFinished = useMutation({
+        mutationFn: ({
+            id,
+            is_finished,
+        }: {
+            id: number;
+            is_finished: boolean;
+        }) => updateTask(id, { is_finished }),
+        onSuccess: replaceTask,
+        onError: () => console.error('Failed to update task'),
+    });
+
+    const editTask = useMutation({
+        mutationFn: (task: Task) =>
+            updateTask(task.id, {
+                description: task.description,
+                priority: task.priority,
+            }),
+        onSuccess: (task) => {
+            replaceTask(task);
+            setCurrentEditTask(null);
+        },
+        onError: () => console.error('Failed to update task'),
+    });
+
+    const reorder = useMutation({
+        mutationFn: async (tasks: Task[]) => {
+            await reorderTasks(tasks.map((task) => task.id));
+
+            return tasks;
+        },
+        onSuccess: (tasks) => updateData((prev) => ({ ...prev, tasks })),
+        onError: () => console.error('Failed to reorder tasks'),
+    });
+
     // Returns whether the note is now saved.
     const updateNotes = async (note: string): Promise<boolean> => {
-        if (note === dayData?.calendar_day?.note) {
+        if (note === dayData.calendar_day.note) {
             return true;
         }
 
-        const dateKey = format(date, 'yyyy-MM-dd');
-
         try {
-            if (!dayData?.calendar_day?.id) {
-                const res = await axios.post(
-                    CalendarDayController.store.url(),
-                    {
-                        date: dateKey,
-                        note,
-                    },
-                );
-
-                if (res.status !== 201) {
-                    throw new Error();
-                }
-
-                updateData((prev) => ({
-                    ...prev,
-                    calendar_day: { id: res.data.id, note },
-                }));
-            } else {
-                const res = await axios.put(
-                    CalendarDayController.update.url(dayData.calendar_day.id),
-                    { note },
-                );
-
-                if (res.status !== 200) {
-                    throw new Error();
-                }
-
-                updateData((prev) => ({
-                    ...prev,
-                    calendar_day: {
-                        ...prev.calendar_day,
-                        note,
-                    },
-                }));
-            }
+            await saveNote.mutateAsync(note);
 
             return true;
         } catch {
-            console.error('Failed to update notes');
-
             return false;
         }
     };
 
-    // ADD task
     const handleAddTask = async (task: string, priority: Priority) => {
         if (!task.trim()) {
             return;
         }
 
-        const dateKey = format(date, 'yyyy-MM-dd');
-
-        try {
-            const res = await axios.post(TaskController.store.url(), {
-                description: task.trim(),
-                date: dateKey,
-                is_finished: false,
-                priority: priority,
-            });
-
-            if (res.status !== 201) {
-                throw new Error();
-            }
-
-            updateData((prev) => ({
-                ...prev,
-                tasks: [...prev.tasks, res.data],
-            }));
-
-            setNewTask('');
-            setIsAddingTask(false);
-        } catch {
-            console.error('Failed to add task');
-        }
+        addTask.mutate({ description: task.trim(), date: dateKey, priority });
     };
 
-    // DELETE task
     const handleDeleteTask = async (id: number) => {
-        try {
-            const res = await axios.delete(TaskController.destroy.url(id));
-
-            if (res.status !== 200) {
-                throw new Error();
-            }
-
-            updateData((prev) => ({
-                ...prev,
-                tasks: prev.tasks.filter((t) => t.id !== id),
-            }));
-        } catch {
-            console.error('Failed to delete task');
-        }
+        removeTask.mutate(id);
     };
 
-    // - check off task
     const toggleFinishTask = async (id: number, is_finished: boolean) => {
-        try {
-            const res = await axios.put(TaskController.update.url(id), {
-                is_finished,
-            });
-
-            if (res.status !== 200) {
-                throw new Error();
-            }
-
-            updateData((prev) => ({
-                ...prev,
-                tasks: prev.tasks.map((task) =>
-                    task.id === id ? res.data : task,
-                ),
-            }));
-        } catch {
-            console.error('Failed to update task');
-        }
+        toggleFinished.mutate({ id, is_finished });
     };
 
     // toggle edit mode (opens edit modal)
@@ -150,32 +145,14 @@ export function useTaskActions({
         setCurrentEditTask(task);
     };
 
-    // EDIT task
     const handleEditTask = async (task: Task | null) => {
-        if (!task) {
-            return;
-        }
-
-        try {
-            const res = await axios.put(TaskController.update.url(task.id), {
-                description: task.description,
-                priority: task.priority,
-            });
-
-            if (res.status !== 200) {
-                throw new Error();
-            }
-
-            updateData((prev) => ({
-                ...prev,
-                tasks: prev.tasks.map((t) => (t.id === task.id ? res.data : t)),
-            }));
-
-            setCurrentEditTask(null);
-        } catch {
-            console.error('Failed to update task');
+        if (task) {
+            editTask.mutate(task);
         }
     };
+
+    // `tasks` is the day's whole list in its new order.
+    const updateTaskOrder = (tasks: Task[]) => reorder.mutate(tasks);
 
     return {
         // state
@@ -192,5 +169,6 @@ export function useTaskActions({
         toggleFinishTask,
         toggleEditTask,
         handleEditTask,
+        updateTaskOrder,
     };
 }

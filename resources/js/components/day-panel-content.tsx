@@ -23,15 +23,50 @@ import {
 } from '@dnd-kit/sortable';
 
 import { format } from 'date-fns';
-import { AlignLeft, CalendarIcon, CheckSquare, Plus } from 'lucide-react';
+import {
+    AlignLeft,
+    CalendarIcon,
+    Check,
+    CheckSquare,
+    Plus,
+} from 'lucide-react';
 import { useState } from 'react';
 import { SortableTask } from '@/components/sortable-task';
 import { TaskFormDialog } from '@/components/task-form-dialog';
+import { NOTE_MAX } from '@/constants/limits';
+import { useNoteAutosave } from '@/hooks/use-note-autosave';
+import type { NoteSaveStatus } from '@/hooks/use-note-autosave';
 import { useTaskActions } from '@/hooks/useTaskActions';
+import { cn } from '@/lib/utils';
 import type { DayData } from '@/types';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Textarea } from './ui/textarea';
+
+// Saving…/Saved next to the note, announced politely to screen readers.
+function NoteStatus({ status }: { status: NoteSaveStatus }) {
+    return (
+        <span
+            role="status"
+            aria-live="polite"
+            className={cn(
+                'flex items-center gap-1 text-xs',
+                status === 'error'
+                    ? 'text-destructive'
+                    : 'text-muted-foreground',
+            )}
+        >
+            {status === 'saving' && 'Saving…'}
+            {status === 'saved' && (
+                <>
+                    <Check className="h-3 w-3" />
+                    Saved
+                </>
+            )}
+            {status === 'error' && "Couldn't save. Edit again to retry."}
+        </span>
+    );
+}
 
 // --- Day Panel Content Component ---
 export function DayPanelContent({
@@ -43,33 +78,6 @@ export function DayPanelContent({
     dayData: DayData;
     updateData: (updater: (prev: DayData) => DayData) => void;
 }) {
-    const savedNote = dayData?.calendar_day?.note || '';
-    const [notes, setNotes] = useState(savedNote);
-    const [isNoteDirty, setIsNoteDirty] = useState(false);
-    const [prevSavedNote, setPrevSavedNote] = useState(savedNote);
-
-    // Follow the saved note when it changes underneath the panel, e.g. when
-    // the day's data finishes loading after the panel opened. Without this
-    // the textarea keeps the empty value it mounted with, and blurring it
-    // saves '' over the real note (BUG-07). Unsaved edits are kept.
-    if (savedNote !== prevSavedNote) {
-        setPrevSavedNote(savedNote);
-
-        if (!isNoteDirty) {
-            setNotes(savedNote);
-        }
-    }
-
-    const saveNotes = async () => {
-        if (!isNoteDirty) {
-            return;
-        }
-
-        if (await updateNotes(notes)) {
-            setIsNoteDirty(false);
-        }
-    };
-
     const {
         taskDialog,
         openAddTask,
@@ -78,7 +86,7 @@ export function DayPanelContent({
         submitTask,
         isSavingTask,
         taskErrors,
-        updateNotes,
+        saveNote,
         deleteTask,
         toggleFinished,
         reorderTasks,
@@ -86,6 +94,11 @@ export function DayPanelContent({
         date,
         dayData,
         updateData,
+    });
+
+    const note = useNoteAutosave({
+        savedNote: dayData.calendar_day.note ?? '',
+        save: saveNote,
     });
 
     // - drag logic
@@ -265,21 +278,29 @@ export function DayPanelContent({
                 </Button>
 
                 <div className="mt-10">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-                        <AlignLeft className="h-4 w-4" />
-                        Notes
-                    </h3>
+                    <div className="flex items-center justify-between">
+                        <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+                            <AlignLeft className="h-4 w-4" />
+                            <label htmlFor="day-note">Notes</label>
+                        </h3>
+                        <NoteStatus status={note.status} />
+                    </div>
                     <Textarea
-                        value={notes}
-                        onChange={(e) => {
-                            setNotes(e.target.value);
-                            setIsNoteDirty(true);
-                        }}
-                        onBlur={saveNotes}
+                        id="day-note"
+                        value={note.draft}
+                        onChange={(e) => note.change(e.target.value)}
+                        onBlur={() => void note.flush()}
+                        maxLength={NOTE_MAX}
+                        aria-describedby="day-note-count"
                         placeholder="Write your notes here..."
                         className="mt-2 min-h-37.5 resize-none border-none bg-muted/20 text-base transition-all focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-accent"
-                        // autoFocus={isAddingNote && !dayData?.calendar_day?.note}
                     />
+                    <p
+                        id="day-note-count"
+                        className="mt-1 text-right text-xs text-muted-foreground tabular-nums"
+                    >
+                        {note.draft.length}/{NOTE_MAX}
+                    </p>
                 </div>
             </section>
         </div>

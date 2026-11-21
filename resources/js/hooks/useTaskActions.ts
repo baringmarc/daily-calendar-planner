@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { TaskFormValues } from '@/components/task-form-dialog';
 import {
@@ -51,14 +51,21 @@ export function useTaskActions({
         }));
 
     // A day row only exists once it has a task or a note, so the first note
-    // creates it.
+    // creates it. The new id is also kept in a ref, because the autosave can
+    // queue the next save before the cache update has re-rendered this hook.
+    const createdDayId = useRef<number | null>(null);
     const saveNote = useMutation({
-        mutationFn: (note: string) =>
-            dayData.calendar_day.id
-                ? updateCalendarDay(dayData.calendar_day.id, { note })
-                : createCalendarDay({ date: dateKey, note }),
-        onSuccess: (day) =>
-            updateData((prev) => ({ ...prev, calendar_day: day })),
+        mutationFn: (note: string) => {
+            const id = dayData.calendar_day.id ?? createdDayId.current;
+
+            return id
+                ? updateCalendarDay(id, { note })
+                : createCalendarDay({ date: dateKey, note });
+        },
+        onSuccess: (day) => {
+            createdDayId.current = day.id;
+            updateData((prev) => ({ ...prev, calendar_day: day }));
+        },
         meta: { errorMessage: "Couldn't save the note" },
     });
 
@@ -189,21 +196,6 @@ export function useTaskActions({
         meta: { errorMessage: "Couldn't reorder the tasks" },
     });
 
-    // Returns whether the note is now saved.
-    const updateNotes = async (note: string): Promise<boolean> => {
-        if (note === dayData.calendar_day.note) {
-            return true;
-        }
-
-        try {
-            await saveNote.mutateAsync(note);
-
-            return true;
-        } catch {
-            return false;
-        }
-    };
-
     // Opening or closing the dialog clears the last attempt's errors.
     const openTaskDialog = (task: Task | null) => {
         saveTask.reset();
@@ -227,7 +219,10 @@ export function useTaskActions({
         // 422 messages by field
         taskErrors: validationErrors(saveTask.error),
         // Actions
-        updateNotes,
+        // Rejects if it failed.
+        saveNote: async (note: string) => {
+            await saveNote.mutateAsync(note);
+        },
         deleteTask: deleteWithUndo,
         toggleFinished: (task: Task) => toggleFinished.mutate(task),
         // `tasks` is the day's whole list in its new order.

@@ -29,7 +29,32 @@ export function DayPanelContent({
     dayData: DayData;
     updateData: (updater: (prev: DayData) => DayData) => void;
 }) {
-    const [notes, setNotes] = useState(dayData?.calendar_day?.note || '');
+    const savedNote = dayData?.calendar_day?.note || '';
+    const [notes, setNotes] = useState(savedNote);
+    const [isNoteDirty, setIsNoteDirty] = useState(false);
+    const [prevSavedNote, setPrevSavedNote] = useState(savedNote);
+
+    // Follow the saved note when it changes underneath the panel, e.g. when
+    // the day's data finishes loading after the panel opened. Without this
+    // the textarea keeps the empty value it mounted with, and blurring it
+    // saves '' over the real note (BUG-07). Unsaved edits are kept.
+    if (savedNote !== prevSavedNote) {
+        setPrevSavedNote(savedNote);
+
+        if (!isNoteDirty) {
+            setNotes(savedNote);
+        }
+    }
+
+    const saveNotes = async () => {
+        if (!isNoteDirty) {
+            return;
+        }
+
+        if (await updateNotes(notes)) {
+            setIsNoteDirty(false);
+        }
+    };
 
     const {
         //- task state
@@ -233,8 +258,11 @@ export function DayPanelContent({
                     </h3>
                     <Textarea
                         value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        onBlur={(e) => updateNotes(e.target.value)}
+                        onChange={(e) => {
+                            setNotes(e.target.value);
+                            setIsNoteDirty(true);
+                        }}
+                        onBlur={saveNotes}
                         placeholder="Write your notes here..."
                         className="mt-2 min-h-37.5 resize-none border-none bg-muted/20 text-base transition-all focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-accent"
                         // autoFocus={isAddingNote && !dayData?.calendar_day?.note}

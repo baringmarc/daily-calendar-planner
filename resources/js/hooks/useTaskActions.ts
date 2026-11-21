@@ -16,9 +16,10 @@ export function useTaskActions({
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [currentEditTask, setCurrentEditTask] = useState<Task | null>(null);
 
-    const updateNotes = async (note: string) => {
+    // Returns whether the note is now saved.
+    const updateNotes = async (note: string): Promise<boolean> => {
         if (note === dayData?.calendar_day?.note) {
-            return;
+            return true;
         }
 
         const dateKey = format(date, 'yyyy-MM-dd');
@@ -56,8 +57,12 @@ export function useTaskActions({
                     },
                 }));
             }
+
+            return true;
         } catch {
             console.error('Failed to update notes');
+
+            return false;
         }
     };
 

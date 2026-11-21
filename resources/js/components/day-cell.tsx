@@ -13,34 +13,57 @@ export function DayCell({
     day,
     data,
     isCurrentMonth,
+    isFocusTarget,
     onSelect,
 }: {
     day: Date;
     data: DayData | undefined;
     isCurrentMonth: boolean;
+    // The one cell reached with Tab; arrow keys move between the others.
+    isFocusTarget: boolean;
     onSelect: (day: Date) => void;
 }) {
     const tasks = data?.tasks ?? [];
     const hasNotes = !!data?.calendar_day.note;
     const hasTasks = tasks.length > 0;
     const doneCount = tasks.filter((t) => t.is_finished).length;
+    const today = isToday(day);
+
+    // The visible content is a summary for sighted users. Screen readers
+    // get it as one sentence instead.
+    const label = [
+        format(day, 'EEEE, MMMM d, yyyy'),
+        today && 'today',
+        hasTasks && `${doneCount} of ${tasks.length} tasks done`,
+        hasNotes && 'has a note',
+    ]
+        .filter(Boolean)
+        .join(', ');
 
     return (
-        <div
+        <button
+            type="button"
+            data-day={format(day, 'yyyy-MM-dd')}
+            tabIndex={isFocusTarget ? 0 : -1}
+            aria-label={label}
+            aria-current={today ? 'date' : undefined}
             onClick={() => onSelect(day)}
             className={cn(
-                'group relative cursor-pointer border-r border-b border-border p-1 transition-all hover:bg-card/80 sm:p-2',
+                'group relative flex cursor-pointer flex-col items-stretch border-r border-b border-border p-1 text-left transition-all outline-none hover:bg-card/80 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:p-2',
                 isCurrentMonth
                     ? 'bg-card'
                     : 'bg-muted/30 text-muted-foreground',
             )}
         >
-            <div className="flex flex-col items-center gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <div
+                aria-hidden="true"
+                className="flex flex-col items-center gap-1 sm:flex-row sm:items-start sm:justify-between"
+            >
                 <span
                     className={cn(
                         'flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium transition-colors',
-                        isToday(day)
-                            ? 'bg-accent text-accent-foreground'
+                        today
+                            ? 'bg-primary text-primary-foreground'
                             : 'group-hover:bg-muted',
                     )}
                 >
@@ -49,10 +72,7 @@ export function DayCell({
 
                 {/* Phones: a dot per task, filled until it's done */}
                 {hasTasks && (
-                    <div
-                        className="flex max-w-full flex-wrap justify-center gap-0.5 sm:hidden"
-                        aria-hidden="true"
-                    >
+                    <div className="flex max-w-full flex-wrap justify-center gap-0.5 sm:hidden">
                         {tasks.slice(0, PHONE_DOTS).map((task) => (
                             <span
                                 key={task.id}
@@ -60,7 +80,7 @@ export function DayCell({
                                     'h-1.5 w-1.5 rounded-full',
                                     task.is_finished
                                         ? 'bg-muted-foreground/30'
-                                        : 'bg-accent',
+                                        : 'bg-primary',
                                 )}
                             />
                         ))}
@@ -69,21 +89,24 @@ export function DayCell({
 
                 {hasTasks && (
                     <div className="hidden space-y-1 sm:block">
-                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-accent opacity-90">
-                            <CheckSquare className="h-3 w-3" />
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
+                            <CheckSquare className="h-3 w-3 text-primary" />
                             <span>
                                 {doneCount}/{tasks.length}
                             </span>
                         </div>
                         <Progress
                             value={(doneCount / tasks.length) * 100}
-                            className="h-1.5 rounded-full bg-accent/20 [&>div]:bg-accent"
+                            className="h-1.5 rounded-full bg-primary/20 [&>div]:bg-primary"
                         />
                     </div>
                 )}
             </div>
 
-            <div className="mt-2.5 hidden w-full flex-col space-y-2 px-1 sm:flex">
+            <div
+                aria-hidden="true"
+                className="mt-2.5 hidden w-full flex-col space-y-2 px-1 sm:flex"
+            >
                 {tasks.slice(0, PREVIEW_TASKS).map((task) => (
                     <div
                         key={task.id}
@@ -106,6 +129,6 @@ export function DayCell({
                     </div>
                 )}
             </div>
-        </div>
+        </button>
     );
 }

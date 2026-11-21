@@ -1,4 +1,9 @@
-import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import type {
+    DndContextProps,
+    DragEndEvent,
+    DragStartEvent,
+    UniqueIdentifier,
+} from '@dnd-kit/core';
 
 import {
     DndContext,
@@ -102,6 +107,32 @@ export function DayPanelContent({
         setActiveId(Number(event.active.id));
     }
 
+    // What screen readers hear while a task is dragged with the keyboard.
+    const describe = (id: UniqueIdentifier) =>
+        dayData.tasks.find((t) => t.id === id)?.description ?? 'Task';
+    const position = (id: UniqueIdentifier) =>
+        `position ${dayData.tasks.findIndex((t) => t.id === id) + 1} of ${dayData.tasks.length}`;
+    const dragAccessibility: DndContextProps['accessibility'] = {
+        screenReaderInstructions: {
+            draggable:
+                'To reorder, press Space or Enter to pick the task up, move it with the arrow keys, and press Space or Enter again to drop it. Press Escape to cancel.',
+        },
+        announcements: {
+            onDragStart: ({ active }) =>
+                `Picked up ${describe(active.id)}, ${position(active.id)}.`,
+            onDragOver: ({ active, over }) =>
+                over
+                    ? `${describe(active.id)} moved to ${position(over.id)}.`
+                    : `${describe(active.id)} is outside the list.`,
+            onDragEnd: ({ active, over }) =>
+                over
+                    ? `${describe(active.id)} dropped at ${position(over.id)}.`
+                    : `${describe(active.id)} dropped back in place.`,
+            onDragCancel: ({ active }) =>
+                `Reordering cancelled. ${describe(active.id)} is back in place.`,
+        },
+    };
+
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
 
@@ -148,10 +179,7 @@ export function DayPanelContent({
                     </p>
                 </div>
 
-                <Button
-                    onClick={openAddTask}
-                    className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
-                >
+                <Button onClick={openAddTask} className="gap-2">
                     <Plus className="h-4 w-4" />
                     Add Task
                 </Button>
@@ -180,7 +208,7 @@ export function DayPanelContent({
                             Tasks
                         </h3>
                         {dayData.tasks.length > 0 && (
-                            <span className="text-xs font-medium text-accent">
+                            <span className="text-xs font-medium text-muted-foreground">
                                 {progressPercent}% Complete
                             </span>
                         )}
@@ -189,13 +217,14 @@ export function DayPanelContent({
                     {dayData.tasks.length > 0 && (
                         <Progress
                             value={progressPercent}
-                            className="h-2 bg-muted/50 transition-all duration-500 [&>div]:bg-accent"
+                            className="h-2 bg-muted/50 transition-all duration-500 [&>div]:bg-primary"
                         />
                     )}
                 </div>
 
                 <DndContext
                     sensors={sensors}
+                    accessibility={dragAccessibility}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                     onDragCancel={() => setActiveId(null)}
@@ -230,10 +259,7 @@ export function DayPanelContent({
                     </SortableContext>
                 </DndContext>
 
-                <Button
-                    onClick={openAddTask}
-                    className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
-                >
+                <Button onClick={openAddTask} className="gap-2">
                     <Plus className="h-4 w-4" />
                     Add Task
                 </Button>

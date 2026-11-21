@@ -40,6 +40,7 @@ export function CalendarHeader({
                         size="icon"
                         className="h-8 w-8 text-muted-foreground"
                         onClick={onPrevMonth}
+                        aria-label="Previous month"
                     >
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
@@ -48,6 +49,7 @@ export function CalendarHeader({
                         size="icon"
                         className="h-8 w-8 text-muted-foreground"
                         onClick={onNextMonth}
+                        aria-label="Next month"
                     >
                         <ChevronRight className="h-5 w-5" />
                     </Button>
@@ -62,7 +64,10 @@ export function CalendarHeader({
                     value={currentDate.getMonth().toString()}
                     onValueChange={(value) => onMonthSelect(parseInt(value))}
                 >
-                    <SelectTrigger className="h-10 w-[124px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 focus:ring-0 sm:w-[140px]">
+                    <SelectTrigger
+                        aria-label="Month"
+                        className="h-10 w-[124px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 sm:w-[140px]"
+                    >
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -78,7 +83,10 @@ export function CalendarHeader({
                     value={currentDate.getFullYear().toString()}
                     onValueChange={(value) => onYearSelect(parseInt(value))}
                 >
-                    <SelectTrigger className="h-10 w-[88px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 focus:ring-0 sm:w-[100px]">
+                    <SelectTrigger
+                        aria-label="Year"
+                        className="h-10 w-[88px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 sm:w-[100px]"
+                    >
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

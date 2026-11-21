@@ -10,7 +10,7 @@ import type { Task } from '@/types';
 // Edit, delete and the drag handle. With a mouse they appear on hover or
 // focus; on touch screens, which can't hover, they are always shown.
 const ROW_ACTION =
-    'shrink-0 rounded-md p-1 text-muted-foreground transition-all pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100';
+    'shrink-0 rounded-md p-1 text-muted-foreground transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100';
 
 export function SortableTask({
     task,
@@ -60,11 +60,15 @@ export function SortableTask({
                 {PRIORITY_MAP[task.priority].label}
             </span>
             <button
+                type="button"
+                role="checkbox"
+                aria-checked={task.is_finished}
+                aria-label={`Done: ${task.description}`}
                 onClick={() => onToggleFinished(task)}
-                className="shrink-0 text-muted-foreground transition-colors hover:text-accent focus:outline-none"
+                className="shrink-0 rounded-full text-muted-foreground transition-colors outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
             >
                 {task.is_finished ? (
-                    <CheckCircle2 className="h-5 w-5 text-accent" />
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
                 ) : (
                     <Circle className="h-5 w-5" />
                 )}
@@ -81,13 +85,17 @@ export function SortableTask({
             </span>
 
             <button
+                type="button"
+                aria-label={`Edit: ${task.description}`}
                 onClick={() => onEdit(task)}
-                className={cn(ROW_ACTION, 'hover:text-destructive')}
+                className={cn(ROW_ACTION, 'hover:text-foreground')}
             >
                 <SquarePen className="h-4 w-4" />
             </button>
 
             <button
+                type="button"
+                aria-label={`Delete: ${task.description}`}
                 onClick={() => onDelete(task)}
                 className={cn(ROW_ACTION, 'hover:text-destructive')}
             >
@@ -95,13 +103,15 @@ export function SortableTask({
             </button>
 
             <button
+                type="button"
                 {...attributes}
                 {...listeners}
+                aria-label={`Reorder: ${task.description}`}
                 className={cn(
                     ROW_ACTION,
                     // touch-none: a touch on the handle drags the task
                     // instead of scrolling the page.
-                    'cursor-grab touch-none hover:text-destructive active:cursor-grabbing',
+                    'cursor-grab touch-none hover:text-foreground active:cursor-grabbing',
                 )}
             >
                 <Logs className="h-4 w-4" />

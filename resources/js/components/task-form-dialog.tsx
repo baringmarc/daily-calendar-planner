@@ -140,7 +140,7 @@ function TaskForm({
                             className={cn(
                                 'flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-all',
                                 priority === p.value
-                                    ? 'border-transparent bg-accent text-accent-foreground shadow-sm'
+                                    ? 'border-transparent bg-primary text-primary-foreground shadow-sm'
                                     : 'border-border bg-muted/30 hover:bg-muted',
                             )}
                         >

@@ -32,8 +32,8 @@ export function CalendarHeader({
     );
 
     return (
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6">
-            <div className="flex items-center gap-4">
+        <header className="flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 py-2 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-4">
                 <div className="flex items-center gap-1 rounded-md bg-muted p-1">
                     <Button
                         variant="ghost"
@@ -57,12 +57,12 @@ export function CalendarHeader({
                 </Button>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-3">
                 <Select
                     value={currentDate.getMonth().toString()}
                     onValueChange={(value) => onMonthSelect(parseInt(value))}
                 >
-                    <SelectTrigger className="h-10 w-[140px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 focus:ring-0">
+                    <SelectTrigger className="h-10 w-[124px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 focus:ring-0 sm:w-[140px]">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -78,7 +78,7 @@ export function CalendarHeader({
                     value={currentDate.getFullYear().toString()}
                     onValueChange={(value) => onYearSelect(parseInt(value))}
                 >
-                    <SelectTrigger className="h-10 w-[100px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 focus:ring-0">
+                    <SelectTrigger className="h-10 w-[88px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 focus:ring-0 sm:w-[100px]">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

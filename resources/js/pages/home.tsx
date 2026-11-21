@@ -55,7 +55,7 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     );
 
     return (
-        <AppLayout>
+        <AppLayout fillViewport>
             <UnfinishedTasksDialog
                 open={isCarryOverOpen}
                 onOpenChange={setIsCarryOverOpen}
@@ -66,7 +66,7 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
                 {!selectedDay ? (
                     <div
                         key="calendar"
-                        className="flex h-screen w-full overflow-hidden bg-background text-foreground"
+                        className="relative flex min-h-0 w-full flex-1 overflow-hidden bg-background text-foreground"
                     >
                         {isLoading && (
                             <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60">

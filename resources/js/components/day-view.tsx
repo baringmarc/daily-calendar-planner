@@ -22,9 +22,9 @@ export function DayView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground"
+            className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-background text-foreground"
         >
-            <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6">
+            <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="outline"
@@ -45,7 +45,7 @@ export function DayView({
                 </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8">
                 <div className="mx-auto max-w-2xl">
                     {/* Keyed on the date so a different day starts with fresh
                         local state (note draft, open dialog). */}

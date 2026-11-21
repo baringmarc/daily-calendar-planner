@@ -35,8 +35,10 @@ export function MonthGrid({
             <div
                 className="grid flex-1 grid-cols-7 overflow-y-auto"
                 style={{
-                    // 4, 5 or 6 weeks depending on the month
-                    gridTemplateRows: `repeat(${days.length / 7}, minmax(0, 1fr))`,
+                    // 4, 5 or 6 weeks depending on the month. Rows share the
+                    // height, but on a short screen they keep 4rem and the
+                    // grid scrolls.
+                    gridTemplateRows: `repeat(${days.length / 7}, minmax(4rem, 1fr))`,
                 }}
             >
                 {days.map((day) => (

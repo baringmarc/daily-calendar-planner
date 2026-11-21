@@ -7,6 +7,11 @@ import { cn } from '@/lib/utils';
 
 import type { Task } from '@/types';
 
+// Edit, delete and the drag handle. With a mouse they appear on hover or
+// focus; on touch screens, which can't hover, they are always shown.
+const ROW_ACTION =
+    'shrink-0 rounded-md p-1 text-muted-foreground transition-all pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100';
+
 export function SortableTask({
     task,
     onToggleFinished,
@@ -37,7 +42,7 @@ export function SortableTask({
             animate={{ opacity: 1, y: 0 }}
             key={task.id}
             className={cn(
-                'group flex items-center gap-3 rounded-lg border border-l-4 p-3 transition-all',
+                'group flex items-center gap-2 rounded-lg border border-l-4 p-2.5 transition-all sm:gap-3 sm:p-3',
                 task.is_finished
                     ? 'border-transparent bg-muted/70'
                     : cn(
@@ -48,7 +53,7 @@ export function SortableTask({
         >
             <span
                 className={cn(
-                    'w-16 rounded-full px-2 py-0.5 text-center text-xs font-medium',
+                    'w-16 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-medium',
                     priorityStyle.badge,
                 )}
             >
@@ -66,7 +71,7 @@ export function SortableTask({
             </button>
             <span
                 className={cn(
-                    'flex-1 text-sm transition-all',
+                    'min-w-0 flex-1 text-sm break-words transition-all',
                     task.is_finished
                         ? 'text-muted-foreground line-through opacity-70'
                         : 'font-medium text-foreground',
@@ -77,14 +82,14 @@ export function SortableTask({
 
             <button
                 onClick={() => onEdit(task)}
-                className="shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
+                className={cn(ROW_ACTION, 'hover:text-destructive')}
             >
                 <SquarePen className="h-4 w-4" />
             </button>
 
             <button
                 onClick={() => onDelete(task)}
-                className="shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
+                className={cn(ROW_ACTION, 'hover:text-destructive')}
             >
                 <Trash2 className="h-4 w-4" />
             </button>
@@ -92,7 +97,12 @@ export function SortableTask({
             <button
                 {...attributes}
                 {...listeners}
-                className="active:cursor:grabbing shrink-0 cursor-grab text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
+                className={cn(
+                    ROW_ACTION,
+                    // touch-none: a touch on the handle drags the task
+                    // instead of scrolling the page.
+                    'cursor-grab touch-none hover:text-destructive active:cursor-grabbing',
+                )}
             >
                 <Logs className="h-4 w-4" />
             </button>

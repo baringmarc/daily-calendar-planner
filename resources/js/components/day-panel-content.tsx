@@ -1,11 +1,21 @@
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 
-import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
+import {
+    DndContext,
+    DragOverlay,
+    KeyboardSensor,
+    MouseSensor,
+    TouchSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
 import {
     SortableContext,
+    arrayMove,
+    sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { arrayMove } from '@dnd-kit/sortable';
 
 import { format } from 'date-fns';
 import { AlignLeft, CalendarIcon, CheckSquare, Plus } from 'lucide-react';
@@ -75,6 +85,18 @@ export function DayPanelContent({
 
     // - drag logic
     const [activeId, setActiveId] = useState<number | null>(null);
+
+    // Drags start from the handle. A few pixels of movement are needed
+    // first, so tapping or clicking the handle doesn't start one, and the
+    // keyboard picks a task up with Space or Enter and moves it with the
+    // arrow keys.
+    const sensors = useSensors(
+        useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(TouchSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
+    );
 
     function handleDragStart(event: DragStartEvent) {
         setActiveId(Number(event.active.id));
@@ -173,6 +195,7 @@ export function DayPanelContent({
                 </div>
 
                 <DndContext
+                    sensors={sensors}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                     onDragCancel={() => setActiveId(null)}

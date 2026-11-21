@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class UpdateTaskRequest extends FormRequest
 {
@@ -27,7 +28,7 @@ class UpdateTaskRequest extends FormRequest
             'description' => 'string|max:255',
             'date' => 'date',
             'is_finished' => 'boolean',
-            'priority' => 'int',
+            'priority' => ['integer', Rule::in([0, 1, 2, 3])],
             'order' => 'int',
         ];
     }

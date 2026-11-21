@@ -71,7 +71,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
   | 2 | High | orange |
   | 3 | Urgent | red |
 
-  Any other value is rejected. A new task defaults to **Medium** ([decision D3](#9-decisions-and-open-questions)). ⚠️ The add dialog currently defaults to Low, and out-of-range values aren't rejected ([BUG-06](tasks.md), [DEBT-05](tasks.md))
+  Any other value is rejected. A new task defaults to **Medium** ([decision D3](#9-decisions-and-open-questions)). ⚠️ The add dialog currently defaults to Low ([DEBT-05](tasks.md))
 - **Order:** tasks in a day are shown in ascending `order`. A new task goes to the bottom (`max(order) + 1`). Reordering rewrites the day's orders as `1..n`.
 
 ### 3.3 "Today" and time zones
@@ -194,7 +194,7 @@ All endpoints require an authenticated, verified session (`auth` + `verified` mi
 
 ### 6.1 Rules that apply to every endpoint
 - **Authorization:** a user can only read or modify their own calendar days and tasks. Any request touching another user's resource gets **403** (or **404**), and nothing changes. Bulk endpoints (reorder, carry-over) must reject the whole request if any id is not owned by the user. Enforced by `TaskPolicy`, `CalendarDayPolicy` and ownership checks in `TaskService` ([SEC-01](tasks.md)).
-- **Validation:** invalid input returns **422** with Laravel's standard error body. It never returns a 500. ⚠️ [BUG-06](tasks.md)
+- **Validation:** invalid input returns **422** with Laravel's standard error body. It never returns a 500.
 - **Dates** are `YYYY-MM-DD` strings. Months are `YYYY-MM`.
 
 ### 6.2 Endpoints
@@ -218,7 +218,7 @@ Returns every day with data in the visible grid for that month. `month` defaults
 The frontend type is `CalendarData` in [resources/js/types/calendar.ts](resources/js/types/calendar.ts). Change both together.
 
 #### `POST /tasks`
-Body: `{ description: string (1–255), date: YYYY-MM-DD, priority: 0–3 }`. Finds or creates the calendar day for `date`, then appends the task. **201** with the task.
+Body: `{ description: string (1–255), date: YYYY-MM-DD, priority?: 0–3 }`. `priority` defaults to 1 (Medium). Finds or creates the calendar day for `date`, then appends the task. **201** with the task.
 
 #### `PUT /tasks/{task}`
 Body (all optional): `{ description, is_finished, priority }`. **200** with the updated task. `date` and `order` are not accepted here: moving a task uses its own endpoint ([FEAT-02](tasks.md)) and ordering uses reorder.

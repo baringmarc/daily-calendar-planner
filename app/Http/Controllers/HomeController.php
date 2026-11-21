@@ -37,8 +37,12 @@ class HomeController extends Controller
 
     public function calendar(Request $request)
     {
+        $request->validate([
+            'month' => ['nullable', 'date_format:Y-m'],
+        ]);
+
         $month = $request->input('month') ?? UserClock::today($request)->format('Y-m');
-        $baseDate = Carbon::parse($month);
+        $baseDate = Carbon::createFromFormat('!Y-m', $month);
 
         $startOfMonth = $baseDate->copy()->startOfMonth();
         $endOfMonth = $baseDate->copy()->endOfMonth();

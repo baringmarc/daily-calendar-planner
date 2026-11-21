@@ -34,7 +34,8 @@ class TaskService
                 'user_id' => $data['user_id'],
                 'description' => $data['description'],
                 'is_finished' => 0,
-                'priority' => $data['priority'],
+                // Medium, matching the column default (spec decision D3)
+                'priority' => $data['priority'] ?? 1,
                 'order' => $currentHighestOrder + 1,
             ]);
         });

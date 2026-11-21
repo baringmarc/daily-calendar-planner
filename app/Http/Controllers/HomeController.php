@@ -3,16 +3,32 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
-use Inertia\Inertia;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+use Laravel\Fortify\Features;
 
 class HomeController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Show the welcome page to guests and the calendar to signed-in users.
      */
-    public function index()
+    public function index(Request $request): Response|RedirectResponse
     {
+        $user = $request->user();
+
+        if ($user === null) {
+            return Inertia::render('welcome', [
+                'canRegister' => Features::enabled(Features::registration()),
+            ]);
+        }
+
+        if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice');
+        }
+
         return Inertia::render('home');
     }
 

@@ -22,7 +22,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-import { format } from 'date-fns';
+import { format, isPast, isToday } from 'date-fns';
 import {
     AlignLeft,
     CalendarIcon,
@@ -65,6 +65,52 @@ function NoteStatus({ status }: { status: NoteSaveStatus }) {
             )}
             {status === 'error' && "Couldn't save. Edit again to retry."}
         </span>
+    );
+}
+
+// The empty state's wording depends on whether the day is past, today or
+// still to come (UX-12).
+function emptyDayCopy(date: Date): { title: string; body: string } {
+    if (isToday(date)) {
+        return {
+            title: 'Nothing to do today',
+            body: 'Take a break, or add a task or a note for today.',
+        };
+    }
+
+    if (isPast(date)) {
+        return {
+            title: 'Nothing was planned',
+            body: 'No tasks were added to this day. You can still add one, or write a note about how it went.',
+        };
+    }
+
+    return {
+        title: 'Nothing planned yet',
+        body: 'Add tasks or a note to get ready for this day.',
+    };
+}
+
+function EmptyDay({ date, onAddTask }: { date: Date; onAddTask: () => void }) {
+    const { title, body } = emptyDayCopy(date);
+
+    return (
+        <div className="flex flex-col items-center justify-center space-y-6 rounded-lg border border-dashed p-6 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
+                <CalendarIcon className="h-7 w-7 text-muted-foreground/60" />
+            </div>
+            <div className="space-y-2">
+                <p className="text-lg font-semibold text-foreground">{title}</p>
+                <p className="mx-auto max-w-72 text-sm text-muted-foreground">
+                    {body}
+                </p>
+            </div>
+
+            <Button onClick={onAddTask} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Task
+            </Button>
+        </div>
     );
 }
 
@@ -161,9 +207,6 @@ export function DayPanelContent({
         reorderTasks(arrayMove(dayData.tasks, oldIndex, newIndex));
     };
 
-    const hasContent =
-        !!dayData?.calendar_day?.note || dayData.tasks.length > 0;
-
     const taskFormDialog = (
         <TaskFormDialog
             open={taskDialog !== null}
@@ -175,32 +218,6 @@ export function DayPanelContent({
             errors={taskErrors}
         />
     );
-
-    // Empty State
-    if (!hasContent) {
-        return (
-            <div className="flex flex-col items-center justify-center space-y-6 p-6 text-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted/50">
-                    <CalendarIcon className="h-8 w-8 text-muted-foreground/50" />
-                </div>
-                <div className="space-y-2">
-                    <p className="text-xl font-semibold text-foreground">
-                        Nothing to do today
-                    </p>
-                    <p className="mx-auto max-w-62.5 text-sm text-muted-foreground">
-                        Take a break, or add some tasks and notes for this day.
-                    </p>
-                </div>
-
-                <Button onClick={openAddTask} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Task
-                </Button>
-
-                {taskFormDialog}
-            </div>
-        );
-    }
 
     const completedCount = dayData.tasks.filter((t) => t.is_finished).length;
     const progressPercent =
@@ -235,47 +252,54 @@ export function DayPanelContent({
                     )}
                 </div>
 
-                <DndContext
-                    sensors={sensors}
-                    accessibility={dragAccessibility}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDragCancel={() => setActiveId(null)}
-                    collisionDetection={closestCenter}
-                >
-                    <DragOverlay>
-                        {activeId ? (
-                            <div className="rounded-lg border bg-card p-3 shadow-lg">
-                                {
-                                    dayData.tasks.find((t) => t.id === activeId)
-                                        ?.description
-                                }
-                            </div>
-                        ) : null}
-                    </DragOverlay>
+                {dayData.tasks.length === 0 ? (
+                    <EmptyDay date={date} onAddTask={openAddTask} />
+                ) : (
+                    <>
+                        <DndContext
+                            sensors={sensors}
+                            accessibility={dragAccessibility}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
+                            onDragCancel={() => setActiveId(null)}
+                            collisionDetection={closestCenter}
+                        >
+                            <DragOverlay>
+                                {activeId ? (
+                                    <div className="rounded-lg border bg-card p-3 shadow-lg">
+                                        {
+                                            dayData.tasks.find(
+                                                (t) => t.id === activeId,
+                                            )?.description
+                                        }
+                                    </div>
+                                ) : null}
+                            </DragOverlay>
 
-                    <SortableContext
-                        items={dayData.tasks.map((task) => task.id)}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        <div className="space-y-2">
-                            {dayData.tasks.map((task) => (
-                                <SortableTask
-                                    key={task.id}
-                                    task={task}
-                                    onToggleFinished={toggleFinished}
-                                    onEdit={openEditTask}
-                                    onDelete={deleteTask}
-                                />
-                            ))}
-                        </div>
-                    </SortableContext>
-                </DndContext>
+                            <SortableContext
+                                items={dayData.tasks.map((task) => task.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <div className="space-y-2">
+                                    {dayData.tasks.map((task) => (
+                                        <SortableTask
+                                            key={task.id}
+                                            task={task}
+                                            onToggleFinished={toggleFinished}
+                                            onEdit={openEditTask}
+                                            onDelete={deleteTask}
+                                        />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
 
-                <Button onClick={openAddTask} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Task
-                </Button>
+                        <Button onClick={openAddTask} className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            Add Task
+                        </Button>
+                    </>
+                )}
 
                 <div className="mt-10">
                     <div className="flex items-center justify-between">

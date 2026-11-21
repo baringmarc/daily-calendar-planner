@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Priority;
 use App\Models\CalendarDay;
 use App\Models\Task;
 use App\Models\User;
@@ -39,7 +40,7 @@ class TaskCrudTest extends TestCase
         $day = $this->user->calendarDays()->where('date', '2026-11-21')->sole();
         $task = Task::sole();
         $this->assertSame($day->id, (int) $task->calendar_day_id);
-        $this->assertSame(2, (int) $task->priority);
+        $this->assertSame(Priority::High, $task->priority);
         $this->assertFalse((bool) $task->is_finished);
     }
 

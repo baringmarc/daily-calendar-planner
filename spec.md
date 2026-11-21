@@ -71,7 +71,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
   | 2 | High | orange |
   | 3 | Urgent | red |
 
-  Any other value is rejected. A new task defaults to **Medium** ([decision D3](#9-decisions-and-open-questions)). ⚠️ The add dialog currently defaults to Low ([DEBT-05](tasks.md))
+  Any other value is rejected. A new task defaults to **Medium** ([decision D3](#9-decisions-and-open-questions)), on the server and in the add dialog. The levels are defined once in `App\Enums\Priority`, and `resources/js/constants/priority.ts` mirrors them (`PriorityTest` checks the two match).
 - **Order:** tasks in a day are shown in ascending `order`. A new task goes to the bottom (`max(order) + 1`). Reordering rewrites the day's orders as `1..n`.
 
 ### 3.3 "Today" and time zones

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Priority;
 use App\Models\CalendarDay;
 use App\Models\Task;
 use App\Models\User;
@@ -48,8 +49,8 @@ class CalendarApiTest extends TestCase
     {
         $user = User::factory()->create();
         $day = CalendarDay::factory()->onDate('2026-11-21')->withNote('Gym at 6')->create(['user_id' => $user->id]);
-        $second = Task::factory()->for($day)->finished()->priority(3)->create(['description' => 'Second', 'order' => 2]);
-        $first = Task::factory()->for($day)->priority(0)->create(['description' => 'First', 'order' => 1]);
+        $second = Task::factory()->for($day)->finished()->priority(Priority::Urgent)->create(['description' => 'Second', 'order' => 2]);
+        $first = Task::factory()->for($day)->priority(Priority::Low)->create(['description' => 'First', 'order' => 1]);
 
         $response = $this->actingAs($user)->getJson(route('api.calendar', ['month' => '2026-11']));
 

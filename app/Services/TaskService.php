@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\Priority;
 use App\Models\CalendarDay;
 use App\Models\Task;
 use App\Models\User;
@@ -34,8 +35,7 @@ class TaskService
                 'user_id' => $data['user_id'],
                 'description' => $data['description'],
                 'is_finished' => 0,
-                // Medium, matching the column default (spec decision D3)
-                'priority' => $data['priority'] ?? 1,
+                'priority' => $data['priority'] ?? Priority::DEFAULT,
                 'order' => $currentHighestOrder + 1,
             ]);
         });

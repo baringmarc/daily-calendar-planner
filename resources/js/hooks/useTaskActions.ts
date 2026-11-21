@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import type { Priority } from '@/constants/priority';
 import type { DayData, Task } from '@/types';
 
 export function useTaskActions({
@@ -67,7 +68,7 @@ export function useTaskActions({
     };
 
     // ADD task
-    const handleAddTask = async (task: string, priority: number) => {
+    const handleAddTask = async (task: string, priority: Priority) => {
         if (!task.trim()) {
             return;
         }

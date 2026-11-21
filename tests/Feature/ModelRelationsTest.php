@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Priority;
 use App\Models\CalendarDay;
 use App\Models\Task;
 use App\Models\User;
@@ -35,10 +36,10 @@ class ModelRelationsTest extends TestCase
 
     public function test_task_attributes_are_cast(): void
     {
-        $task = Task::factory()->finished()->priority(2)->create()->fresh();
+        $task = Task::factory()->finished()->priority(Priority::High)->create()->fresh();
 
         $this->assertTrue($task->is_finished);
-        $this->assertSame(2, $task->priority);
+        $this->assertSame(Priority::High, $task->priority);
         $this->assertIsInt($task->order);
         $this->assertIsInt($task->calendar_day_id);
     }

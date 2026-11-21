@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Priority;
 use App\Models\CalendarDay;
 use App\Models\Task;
 use App\Models\User;
@@ -76,7 +77,7 @@ class AuthorizationTest extends TestCase
         $task = $this->ownerTask->fresh();
         $this->assertSame('Owner task', $task->description);
         $this->assertFalse((bool) $task->is_finished);
-        $this->assertSame(1, (int) $task->priority);
+        $this->assertSame(Priority::Medium, $task->priority);
     }
 
     public function test_user_can_delete_their_own_task(): void

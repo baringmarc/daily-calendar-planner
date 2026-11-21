@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Priority;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,13 @@ class Task extends Model
     ];
 
     /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'priority' => Priority::DEFAULT,
+    ];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -32,7 +40,7 @@ class Task extends Model
         return [
             'calendar_day_id' => 'integer',
             'is_finished' => 'boolean',
-            'priority' => 'integer',
+            'priority' => Priority::class,
             'order' => 'integer',
         ];
     }

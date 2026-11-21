@@ -9,7 +9,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PRIORITY_MAP } from '@/constants/priority';
+import { PRIORITY_DEFAULT, PRIORITY_MAP } from '@/constants/priority';
+import type { Priority } from '@/constants/priority';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 
@@ -24,9 +25,9 @@ export function AddTaskDialog({
     onOpenChange: (open: boolean) => void;
     newTask: string;
     setNewTask: (task: string) => void;
-    handleAddTask: (task: string, priority: number) => Promise<void>;
+    handleAddTask: (task: string, priority: Priority) => Promise<void>;
 }) {
-    const [priority, setPriority] = useState(0);
+    const [priority, setPriority] = useState<Priority>(PRIORITY_DEFAULT);
 
     return (
         <AlertDialog open={open}>

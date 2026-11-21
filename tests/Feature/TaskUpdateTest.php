@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Priority;
 use App\Models\CalendarDay;
 use App\Models\Task;
 use App\Models\User;
@@ -39,7 +40,7 @@ class TaskUpdateTest extends TestCase
 
         $task = $this->task->fresh();
         $this->assertSame('Edited', $task->description);
-        $this->assertSame(3, (int) $task->priority);
+        $this->assertSame(Priority::Urgent, $task->priority);
     }
 
     /**

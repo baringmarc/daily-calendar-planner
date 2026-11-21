@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Priority;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +30,7 @@ class UpdateTaskRequest extends FormRequest
             // (carry-over, reorder), not here.
             'description' => 'string|max:255',
             'is_finished' => 'boolean',
-            'priority' => ['integer', Rule::in([0, 1, 2, 3])],
+            'priority' => ['integer', Rule::enum(Priority::class)],
         ];
     }
 }

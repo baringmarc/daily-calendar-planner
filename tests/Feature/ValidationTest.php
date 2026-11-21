@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Priority;
 use App\Models\CalendarDay;
 use App\Models\Task;
 use App\Models\User;
@@ -54,7 +55,7 @@ class ValidationTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $this->assertSame(1, (int) Task::findOrFail($response->json('id'))->priority);
+        $this->assertSame(Priority::Medium, Task::findOrFail($response->json('id'))->priority);
     }
 
     /**
@@ -95,7 +96,7 @@ class ValidationTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors('priority');
 
-        $this->assertSame(2, (int) $task->fresh()->priority);
+        $this->assertSame(Priority::High, $task->fresh()->priority);
     }
 
     public function test_creating_a_task_rejects_a_date_that_is_not_y_m_d(): void

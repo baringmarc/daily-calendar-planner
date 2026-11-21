@@ -1,10 +1,12 @@
+import type { Priority } from '@/constants/priority';
+
 // Mirrors App\Http\Resources\TaskResource. Change both together.
 export type Task = {
     id: number;
     description: string;
     is_finished: boolean;
     calendar_day_id: number;
-    priority: number;
+    priority: Priority;
     order: number;
 };
 

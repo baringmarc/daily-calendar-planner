@@ -31,14 +31,16 @@ import {
     Plus,
 } from 'lucide-react';
 import { useState } from 'react';
+import { MoveTaskDialog } from '@/components/move-task-dialog';
 import { SortableTask } from '@/components/sortable-task';
 import { TaskFormDialog } from '@/components/task-form-dialog';
 import { NOTE_MAX } from '@/constants/limits';
+import { useMoveTask } from '@/hooks/use-move-task';
 import { useNoteAutosave } from '@/hooks/use-note-autosave';
 import type { NoteSaveStatus } from '@/hooks/use-note-autosave';
 import { useTaskActions } from '@/hooks/useTaskActions';
 import { cn } from '@/lib/utils';
-import type { DayData } from '@/types';
+import type { DayData, Task } from '@/types';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Textarea } from './ui/textarea';
@@ -142,6 +144,10 @@ export function DayPanelContent({
         updateData,
     });
 
+    const moveTask = useMoveTask();
+    // The task whose "Pick a date…" dialog is open.
+    const [movingTask, setMovingTask] = useState<Task | null>(null);
+
     const note = useNoteAutosave({
         savedNote: dayData.calendar_day.note ?? '',
         save: saveNote,
@@ -228,6 +234,15 @@ export function DayPanelContent({
     return (
         <div className="space-y-10 pb-10">
             {taskFormDialog}
+            <MoveTaskDialog
+                task={movingTask}
+                date={date}
+                onOpenChange={(open) => !open && setMovingTask(null)}
+                onMove={(task, to) => {
+                    setMovingTask(null);
+                    moveTask(task, to);
+                }}
+            />
 
             {/* tasks Section */}
             <section className="space-y-5">
@@ -285,9 +300,12 @@ export function DayPanelContent({
                                         <SortableTask
                                             key={task.id}
                                             task={task}
+                                            date={date}
                                             onToggleFinished={toggleFinished}
                                             onEdit={openEditTask}
                                             onDelete={deleteTask}
+                                            onMove={moveTask}
+                                            onPickMoveDate={setMovingTask}
                                         />
                                     ))}
                                 </div>

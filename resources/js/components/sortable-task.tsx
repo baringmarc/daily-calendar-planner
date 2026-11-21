@@ -1,7 +1,23 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { addDays, format, isToday, isTomorrow } from 'date-fns';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Circle, Trash2, SquarePen, Logs } from 'lucide-react';
+import {
+    CalendarClock,
+    CheckCircle2,
+    Circle,
+    Trash2,
+    SquarePen,
+    Logs,
+} from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PRIORITY_MAP, PRIORITY_STYLES } from '@/constants/priority';
 import { cn } from '@/lib/utils';
 
@@ -9,19 +25,31 @@ import type { Task } from '@/types';
 
 // Edit, delete and the drag handle. With a mouse they appear on hover or
 // focus; on touch screens, which can't hover, they are always shown.
+// An open menu keeps its trigger visible.
 const ROW_ACTION =
-    'shrink-0 rounded-md p-1 text-muted-foreground transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100';
+    'shrink-0 rounded-md p-1 text-muted-foreground transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100 data-[state=open]:opacity-100';
+
+const ymd = (date: Date) => format(date, 'yyyy-MM-dd');
 
 export function SortableTask({
     task,
+    date,
     onToggleFinished,
     onEdit,
     onDelete,
+    onMove,
+    onPickMoveDate,
 }: {
     task: Task;
+    // The day the task is on.
+    date: Date;
     onToggleFinished: (task: Task) => void;
     onEdit: (task: Task) => void;
     onDelete: (task: Task) => void;
+    // `to` is yyyy-MM-dd.
+    onMove: (task: Task, to: string) => void;
+    // Opens the date picker for "Pick a date…".
+    onPickMoveDate: (task: Task) => void;
 }) {
     const priorityStyle = PRIORITY_STYLES[task.priority];
 
@@ -92,6 +120,38 @@ export function SortableTask({
             >
                 <SquarePen className="h-4 w-4" />
             </button>
+
+            <DropdownMenu>
+                <DropdownMenuTrigger
+                    aria-label={`Move: ${task.description}`}
+                    className={cn(ROW_ACTION, 'hover:text-foreground')}
+                >
+                    <CalendarClock className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Move to</DropdownMenuLabel>
+                    {!isToday(date) && (
+                        <DropdownMenuItem
+                            onSelect={() => onMove(task, ymd(new Date()))}
+                        >
+                            Today
+                        </DropdownMenuItem>
+                    )}
+                    {!isTomorrow(date) && (
+                        <DropdownMenuItem
+                            onSelect={() =>
+                                onMove(task, ymd(addDays(new Date(), 1)))
+                            }
+                        >
+                            Tomorrow
+                        </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => onPickMoveDate(task)}>
+                        Pick a date…
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
 
             <button
                 type="button"

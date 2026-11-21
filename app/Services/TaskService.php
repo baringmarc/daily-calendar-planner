@@ -42,6 +42,34 @@ class TaskService
     }
 
     /**
+     * Move one of the user's tasks to their day for $date (Y-m-d), creating
+     * the day if needed, and append it after the tasks already there. A
+     * task already on that day stays where it is.
+     */
+    public function moveTask(User $user, Task $task, string $date): Task
+    {
+        return DB::transaction(function () use ($user, $task, $date) {
+            $targetDay = CalendarDay::firstOrCreate([
+                'user_id' => $user->id,
+                'date' => $date,
+            ]);
+
+            if ($task->calendar_day_id === $targetDay->id) {
+                return $task;
+            }
+
+            $order = Task::where('calendar_day_id', $targetDay->id)->max('order') ?? 0;
+
+            $task->update([
+                'calendar_day_id' => $targetDay->id,
+                'order' => $order + 1,
+            ]);
+
+            return $task;
+        });
+    }
+
+    /**
      * The user's unfinished tasks on days strictly before $today (Y-m-d),
      * oldest day first, each with its day's `date`.
      *

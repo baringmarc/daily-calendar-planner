@@ -240,4 +240,16 @@ class AuthorizationTest extends TestCase
         $today = $this->intruder->calendarDays()->where('date', '2026-11-21')->firstOrFail();
         $this->assertSame($today->id, (int) $intruderTask->fresh()->calendar_day_id);
     }
+
+    public function test_user_cannot_move_another_users_task(): void
+    {
+        $response = $this->actingAs($this->intruder)->putJson(route('tasks.move', $this->ownerTask), [
+            'date' => '2026-11-12',
+        ]);
+
+        $response->assertForbidden();
+        $this->assertSame($this->ownerDay->id, (int) $this->ownerTask->fresh()->calendar_day_id);
+        $this->assertSame(0, $this->intruder->calendarDays()->count());
+        $this->assertSame(1, $this->owner->calendarDays()->count());
+    }
 }

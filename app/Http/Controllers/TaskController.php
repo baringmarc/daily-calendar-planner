@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CarryOverTasksRequest;
+use App\Http\Requests\MoveTaskRequest;
 use App\Http\Requests\ReorderTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -52,6 +53,18 @@ class TaskController extends Controller
         $task->delete();
 
         return response()->json(['message' => 'Task deleted successfully'], 200);
+    }
+
+    /**
+     * Move a task to the end of another day's list.
+     */
+    public function move(MoveTaskRequest $request, Task $task)
+    {
+        Gate::authorize('update', $task);
+
+        $task = $this->taskService->moveTask($request->user(), $task, $request->validated('date'));
+
+        return new TaskResource($task);
     }
 
     /**

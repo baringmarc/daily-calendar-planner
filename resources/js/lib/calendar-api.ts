@@ -79,6 +79,13 @@ export function deleteTaskOnUnload(id: number): void {
     });
 }
 
+/** `date` is yyyy-MM-dd. The task goes to the end of that day's list. */
+export async function moveTask(id: number, date: string): Promise<Task> {
+    const res = await axios.put(TaskController.move.url(id), { date });
+
+    return res.data;
+}
+
 /** `ids` are one day's tasks in their new order. */
 export async function reorderTasks(ids: number[]): Promise<void> {
     await axios.put(TaskController.reorder.url(), {

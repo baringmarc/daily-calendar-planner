@@ -44,6 +44,7 @@ Work is tracked by the stable task IDs in [tasks.md](tasks.md) (`CI-01`, `SEC-01
 - `/tasks` (store/update/destroy) and `/calendar-days` (store/update) are resource routes restricted with `->only()`. They return JSON, not Inertia responses.
 - `GET /api/tasks/unfinished` returns `{ unfinishedTasks: { [date]: Task[] } }`: the user's unfinished tasks on days strictly before today, from any month, oldest first.
 - `POST /api/tasks/carry-over` (`CarryOverTasksRequest`) takes `{ task_ids }` and appends those tasks to the user's day for today, which the server finds or creates. It returns 403 if any id isn't the user's and 422 if any task is finished or not from a past day.
+- `PUT /api/tasks/{task}/move` (`MoveTaskRequest`) takes `{ date }` and appends the task to the user's day for that date, which the server finds or creates (`TaskService::moveTask`). The frontend's `hooks/use-move-task.ts` removes it from its day in every cached month at once and places the server's copy on success.
 - `PUT /api/tasks/reorder` (`ReorderTasksRequest`) takes one day's tasks in their new order and rewrites `order` as 1..n in a single `CASE` update. It returns 422 if the tasks span more than one day.
 
 **Time zone.** The browser sends its IANA zone in an `X-Timezone` header on every axios request (set in `resources/js/app.tsx`). Server code that needs "today" must use `App\Support\UserClock::today($request)`, which falls back to `config('app.timezone')` (UTC) for a missing or invalid header. Never call `now()` for the user's date.

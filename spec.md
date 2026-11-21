@@ -137,6 +137,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | FR-T5 | Reorder tasks by drag and drop, and by keyboard. The new order shows immediately and is persisted, and goes back if the server rejects it. | ✅ |
 | FR-T6 | All task actions are usable on touch devices. They are not hover-only. | ✅ |
 | FR-T7 | Failed actions show a visible error (a toast, or the message next to the field for a 422) and leave the UI consistent with the server. | ✅ |
+| FR-T8 | Move a task to another date from its Move menu: Today, Tomorrow, or a picked date. It leaves its day at once and goes to the end of the new day's list. | ✅ |
 
 ### 4.5 Carry-over
 
@@ -221,7 +222,7 @@ The frontend type is `CalendarData` in [resources/js/types/calendar.ts](resource
 Body: `{ description: string (1–255), date: YYYY-MM-DD, priority?: 0–3 }`. `priority` defaults to 1 (Medium). Finds or creates the calendar day for `date`, then appends the task. **201** with the task.
 
 #### `PUT /tasks/{task}`
-Body (all optional): `{ description, is_finished, priority }`. **200** with the updated task. `date` and `order` are not accepted here: moving a task uses its own endpoint ([FEAT-02](tasks.md)) and ordering uses reorder.
+Body (all optional): `{ description, is_finished, priority }`. **200** with the updated task. `date` and `order` are not accepted here: moving a task uses its own endpoint (below) and ordering uses reorder.
 
 #### `DELETE /tasks/{task}`
 **200** `{ "message": "Task deleted successfully" }`.
@@ -231,6 +232,9 @@ Body: `{ date: YYYY-MM-DD, note: string|null (≤500) }`. One per user per date.
 
 #### `PUT /calendar-days/{calendarDay}`
 Body: `{ note: string|null (≤500) }`. **200** with the day.
+
+#### `PUT /api/tasks/{task}/move`
+Body: `{ date: YYYY-MM-DD }`. Finds or creates the user's day for `date` and appends the task after that day's tasks. Moving a task to the day it is already on changes nothing. **200** with the task. **403** for another user's task, **422** for an invalid date (`MoveTaskRequest`).
 
 #### `PUT /api/tasks/reorder`
 Body: `{ tasks: [{ id }, ...] }` (at least one, no duplicates), all from the same calendar day and in the new order. Rewrites `order` as `1..n` in one query. **200**. **403** if any task isn't the user's, **422** for an invalid body, an unknown id, or tasks from more than one day (`ReorderTasksRequest`).

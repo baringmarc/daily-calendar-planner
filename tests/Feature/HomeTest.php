@@ -102,6 +102,46 @@ class HomeTest extends TestCase
             );
     }
 
+    /**
+     * The calendar view and the week it shows come from the URL (FEAT-10).
+     */
+    public function test_the_view_and_week_are_read_from_the_query(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('home'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('view', 'month')
+                ->where('week', null)
+            );
+
+        $this->actingAs($user)->get(route('home', ['view' => 'week', 'week' => '2026-11-16']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('view', 'week')
+                ->where('week', '2026-11-16')
+            );
+
+        $this->actingAs($user)->get(route('home', ['month' => '2026-11', 'view' => 'agenda']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('view', 'agenda')
+                ->where('month', '2026-11')
+            );
+    }
+
+    public function test_an_unknown_view_or_invalid_week_falls_back_to_the_month(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('home', ['view' => 'year', 'week' => '2026-02-30']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('view', 'month')
+                ->where('week', null)
+            );
+
+        $this->actingAs($user)->get(route('home', ['view' => ['week']]))
+            ->assertInertia(fn (Assert $page) => $page->where('view', 'month'));
+    }
+
     public function test_guests_cannot_fetch_calendar_data(): void
     {
         $response = $this->get(route('api.calendar'));

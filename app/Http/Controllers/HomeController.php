@@ -19,6 +19,11 @@ use Laravel\Fortify\Features;
 class HomeController extends Controller
 {
     /**
+     * The calendar's views. `month` is the default.
+     */
+    private const VIEWS = ['month', 'week', 'agenda'];
+
+    /**
      * Show the welcome page to guests and the calendar to signed-in users.
      */
     public function index(Request $request): Response|RedirectResponse
@@ -41,10 +46,16 @@ class HomeController extends Controller
         // on the current month.
         $day = self::dateFromQuery($request, 'day', 'Y-m-d');
 
+        // ?view=week|agenda picks the calendar view (FEAT-10), and ?week= is
+        // any date in the week the week view shows.
+        $view = $request->query('view');
+
         return Inertia::render('home', [
             'weekStartsOn' => self::weekStartsOn(),
             'month' => self::dateFromQuery($request, 'month', 'Y-m') ?? ($day !== null ? substr($day, 0, 7) : null),
             'day' => $day,
+            'view' => in_array($view, self::VIEWS, true) ? $view : 'month',
+            'week' => self::dateFromQuery($request, 'week', 'Y-m-d'),
         ]);
     }
 

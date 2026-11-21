@@ -26,3 +26,6 @@ export type UnfinishedTasks = Record<string, Task[]>;
 
 // `GET /api/calendar`, keyed by Y-m-d date.
 export type CalendarData = Record<string, DayData>;
+
+// The calendar's views (FEAT-10), from ?view= in the URL.
+export type CalendarView = 'month' | 'week' | 'agenda';

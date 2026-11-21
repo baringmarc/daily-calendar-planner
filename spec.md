@@ -117,6 +117,16 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | FR-M6 | Data for every visible cell, including leading and trailing days from adjacent months, is loaded. | ✅ |
 | FR-M7 | The current month and selected day are reflected in the URL (`/?day=yyyy-MM-dd&month=yyyy-MM`), so refresh, back/forward and deep links work. The day view's back button goes back in history when the month view is behind it. | ✅ |
 
+### 4.2a Week and agenda views
+
+| ID | Requirement | Status |
+|---|---|---|
+| FR-W1 | The calendar header switches between Month, Week and Agenda. The view is in the URL (`/?view=week&week=yyyy-MM-dd`, `/?month=yyyy-MM&view=agenda`), and the month view, the default, keeps its URLs. | ✅ |
+| FR-W2 | The week view shows the seven days of one week, from the configured week start, with every task and a done/total count, and pages a week at a time. On smaller screens the days are stacked. | ✅ |
+| FR-W3 | In the week view, tasks can be checked off, and dragged by their handle (mouse, touch, or the keyboard a day at a time) onto another day to move them there ([FR-T8](#44-tasks)). | ✅ |
+| FR-W4 | The agenda view lists the month's days that have tasks or a note, plus today, with their tasks (which can be checked off) and the start of the note. An empty month says so. | ✅ |
+| FR-W5 | A day opened from the week or agenda view goes back to that view. | ✅ |
+
 ### 4.3 Day view
 
 | ID | Requirement | Status |
@@ -249,8 +259,8 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 
 ## 7. Frontend architecture
 
-- **Single page.** `HomeController@index` renders the `home` Inertia page with the props `weekStartsOn`, `month` and `day` (the last two from the query string, null when absent or invalid). After that, all data goes through the JSON API above.
-- [resources/js/pages/home.tsx](resources/js/pages/home.tsx) reads the visible month and the selected day from the URL props, changes them with Inertia's client-side `router.push`/`replace`, and switches between the month view (`CalendarHeader` + `MonthGrid` of `DayCell`s) and `DayView`.
+- **Single page.** `HomeController@index` renders the `home` Inertia page with the props `weekStartsOn`, `month`, `day`, `view` and `week` (from the query string: null when absent or invalid, and `view` falls back to `month`). After that, all data goes through the JSON API above.
+- [resources/js/pages/home.tsx](resources/js/pages/home.tsx) reads the view, the visible month or week and the selected day from the URL props, changes them with Inertia's client-side `router.push`/`replace`, and shows `CalendarHeader` over the month grid (`MonthGrid` of `DayCell`s), `WeekView` or `AgendaView`, or the `DayView`. Every view reads the month's cached query: a week is always inside the grid of the month it starts in.
 - **Data layer: TanStack Query** ([decision D5](#9-decisions-and-open-questions)). [resources/js/lib/calendar-api.ts](resources/js/lib/calendar-api.ts) holds the query keys and one axios function per endpoint. Each month's `CalendarData` is its own query (`['calendar', 'yyyy-MM']`), cached and refetched in the background when shown again or when the window regains focus.
 - [resources/js/hooks/use-calendar.ts](resources/js/hooks/use-calendar.ts) reads the visible month's query, fetches the carry-over candidates from `GET /api/tasks/unfinished` whenever the month view is shown, and carries tasks over (then invalidates every cached month).
 - [resources/js/components/day-panel-content.tsx](resources/js/components/day-panel-content.tsx) renders a day: tasks (dnd-kit sortable), add/edit dialogs and the note.

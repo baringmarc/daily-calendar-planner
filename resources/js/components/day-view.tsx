@@ -31,7 +31,7 @@ export function DayView({
                         size="icon"
                         className="h-10 w-10"
                         onClick={onBack}
-                        aria-label="Back to the month"
+                        aria-label="Back to the calendar"
                     >
                         <ChevronLeft className="h-5 w-5" />
                     </Button>

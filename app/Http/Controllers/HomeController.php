@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CalendarDayResource;
+use App\Http\Resources\TaskResource;
+use App\Models\CalendarDay;
 use App\Support\UserClock;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,7 +39,7 @@ class HomeController extends Controller
         ]);
     }
 
-    public function calendar(Request $request)
+    public function calendar(Request $request): JsonResponse
     {
         $request->validate([
             'month' => ['nullable', 'date_format:Y-m'],
@@ -51,42 +55,22 @@ class HomeController extends Controller
         $startDate = $startOfMonth->copy()->startOfWeek($weekStartsOn)->toDateString();
         $endDate = $endOfMonth->copy()->endOfWeek(($weekStartsOn + 6) % 7)->toDateString();
 
-        $User = $request->user();
-
-        $calendarData = $User->calendarDays()
+        $days = $request->user()->calendarDays()
             ->whereBetween('date', [$startDate, $endDate])
             ->with('tasks')
-            ->orderBy('date', 'desc')
+            ->orderBy('date')
             ->get();
 
-        // - prepare calendar data
-        $calendarData = $calendarData->mapWithKeys(function ($day) {
-            $tasks = $day->tasks->map(function ($task) use ($day) {
-
-                return [
-                    'id' => $task->id,
-                    'description' => $task->description,
-                    'is_finished' => $task->is_finished,
-                    'calendar_day_id' => $day->id,
-                    'priority' => $task->priority,
-                    'order' => $task->order,
-                ];
-
-            })->toArray();
-
-            return [
-                $day->date => [
-                    'tasks' => $tasks,
-                    'calendar_day' => [
-                        'id' => $day->id,
-                        'note' => $day->note,
-                    ],
-                ],
-            ];
-        })->toArray();
+        $calendarData = $days->mapWithKeys(fn (CalendarDay $day) => [
+            $day->date => [
+                'calendar_day' => new CalendarDayResource($day),
+                'tasks' => TaskResource::collection($day->tasks),
+            ],
+        ]);
 
         return response()->json([
-            'calendarData' => $calendarData,
+            // An object even when empty, to match the frontend's CalendarData type.
+            'calendarData' => (object) $calendarData->all(),
         ]);
     }
 

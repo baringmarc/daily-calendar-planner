@@ -37,10 +37,10 @@ Work is tracked by the stable task IDs in [tasks.md](tasks.md) (`CI-01`, `SEC-01
 
 ## Architecture
 
-**Data model.** `User` has many `CalendarDay` (one row per user per date, holds `note`). `CalendarDay` has many `Task` (`description`, `is_finished`, `priority` 0–3 = Low/Medium/High/Urgent, `order`). `CalendarDay::tasks()` always orders by `order`. A day row is created lazily: `TaskService::create()` uses `firstOrCreate` on `(user_id, date)`, so the frontend can add a task to a date that has no `CalendarDay` yet.
+**Data model.** `User` has many `CalendarDay` (one row per user per date, holds `note`). `CalendarDay` has many `Task` (`description`, `is_finished`, `priority` 0–3 = Low/Medium/High/Urgent, `order`). `CalendarDay::tasks()` always orders by `order`. `User::tasks()` is a `hasManyThrough`. `Task` casts `is_finished` to bool and its ids/`priority`/`order` to int; `CalendarDay::date` stays a `Y-m-d` string. A day row is created lazily: `TaskService::create()` uses `firstOrCreate` on `(user_id, date)`, so the frontend can add a task to a date that has no `CalendarDay` yet.
 
 **The app is one page and is not Inertia-driven.** `GET /` (`HomeController@index`, route `home`) renders `welcome` for guests and the `home` Inertia page for signed-in users, whose only prop is `weekStartsOn` (from `config/calendar.php`, Monday by default). Everything after that is client-side JSON over axios:
-- `GET /api/calendar?month=YYYY-MM` (`HomeController@calendar`) returns `calendarData` keyed by `Y-m-d` date, covering the full weeks around the month (starting on `config('calendar.week_starts_on')`, the same value the grid gets as `weekStartsOn`, so pass it to every date-fns week call), with shape `{ calendar_day: {id, note}, tasks: [...] }`. That shape is the `CalendarData`/`DayData` type in `resources/js/types/calendar.ts`. If you change the response, change the type too.
+- `GET /api/calendar?month=YYYY-MM` (`HomeController@calendar`) returns `calendarData` keyed by `Y-m-d` date, covering the full weeks around the month (starting on `config('calendar.week_starts_on')`, the same value the grid gets as `weekStartsOn`, so pass it to every date-fns week call), with shape `{ calendar_day: {id, note}, tasks: [...] }`. Tasks and days are serialised by `TaskResource` / `CalendarDayResource` (unwrapped: `JsonResource::withoutWrapping()` in `AppServiceProvider`), and every task endpoint returns `TaskResource`. That shape is the `CalendarData`/`DayData`/`Task` types in `resources/js/types/calendar.ts`. If you change a resource, change the type too.
 - `/tasks` (store/update/destroy) and `/calendar-days` (store/update) are resource routes restricted with `->only()`. They return JSON, not Inertia responses.
 - `GET /api/tasks/unfinished` returns `{ unfinishedTasks: { [date]: Task[] } }`: the user's unfinished tasks on days strictly before today, from any month, oldest first.
 - `POST /api/tasks/carry-over` (`CarryOverTasksRequest`) takes `{ task_ids }` and appends those tasks to the user's day for today, which the server finds or creates. It returns 403 if any id isn't the user's and 422 if any task is finished or not from a past day.
@@ -57,9 +57,6 @@ Business logic lives in `app/Services/TaskService.php`, which `TaskController` r
 **Authorization.** `TaskPolicy` (ownership through `calendarDay.user_id`) and `CalendarDayPolicy` are checked with `Gate::authorize()` in the controllers' `update`/`destroy`. The bulk endpoints check ownership in `TaskService`: `reorderTasks`/`carryOverTasks` throw `AuthorizationException` (403) if any id isn't the user's, and only touch the user's tasks. The Form Requests' `authorize()` methods only check `Auth::check()`, so any new endpoint must authorize explicitly.
 
 **Tests.** Each domain area has a feature test: `CalendarApiTest` (range and response shape), `TaskCrudTest`, `CalendarDayNoteTest`, `ReorderTest`, `CarryOverTest`, `AuthorizationTest` (cross-user access), `UserTimezoneTest` and `ValidationTest`. Factory states: `CalendarDay::factory()->onDate('Y-m-d')`, `->past()`, `->future()`, `->withNote()`, and `Task::factory()->finished()`, `->priority(n)`.
-
-**Known gaps (check before relying on them):**
-- `CalendarDay` has no `user()` relation yet, so pass `user_id` explicitly instead of `->for($user)`.
 
 <laravel-boost-guidelines>
 === foundation rules ===

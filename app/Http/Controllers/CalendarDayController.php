@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCalendarDayRequest;
 use App\Http\Requests\UpdateCalendarDayRequest;
+use App\Http\Resources\CalendarDayResource;
 use App\Models\CalendarDay;
 use Illuminate\Support\Facades\Gate;
 
@@ -16,7 +17,7 @@ class CalendarDayController extends Controller
     {
         $calendarDay = $request->user()->calendarDays()->create($request->validated());
 
-        return response()->json($calendarDay, 201);
+        return (new CalendarDayResource($calendarDay))->response()->setStatusCode(201);
     }
 
     /**
@@ -28,6 +29,6 @@ class CalendarDayController extends Controller
 
         $calendarDay->update($request->validated());
 
-        return response()->json($calendarDay, 200);
+        return new CalendarDayResource($calendarDay);
     }
 }

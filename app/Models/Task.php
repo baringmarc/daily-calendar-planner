@@ -24,6 +24,19 @@ class Task extends Model
         'priority',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'calendar_day_id' => 'integer',
+            'is_finished' => 'boolean',
+            'priority' => 'integer',
+            'order' => 'integer',
+        ];
+    }
+
     public function calendarDay(): BelongsTo
     {
         return $this->belongsTo(CalendarDay::class);

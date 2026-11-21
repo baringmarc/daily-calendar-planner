@@ -180,11 +180,11 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 Ownership of a task is derived through its calendar day: `task.calendar_day.user_id`.
 
 ### 5.2 Relationships
-- `User` has many `CalendarDay`.
+- `User` has many `CalendarDay`, and has many `Task` through them.
 - `CalendarDay` belongs to `User` and has many `Task`, always ordered by `order` ascending.
-- `Task` belongs to `CalendarDay`.
+- `Task` belongs to `CalendarDay`. `is_finished` is cast to a boolean, and `priority`, `order` and `calendar_day_id` to integers.
 
-Planned additions: `User → hasManyThrough Task`, `CalendarDay → belongsTo User`, and model casts for `is_finished` (bool) and `priority` (int). See [DEBT-04](tasks.md).
+Every endpoint returns tasks as `TaskResource` and days as `CalendarDayResource`, so ids are numbers and `is_finished` is a boolean.
 
 ---
 

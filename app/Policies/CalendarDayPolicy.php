@@ -9,6 +9,6 @@ class CalendarDayPolicy
 {
     public function update(User $user, CalendarDay $calendarDay): bool
     {
-        return (int) $calendarDay->user_id === $user->id;
+        return $calendarDay->user_id === $user->id;
     }
 }

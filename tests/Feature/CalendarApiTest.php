@@ -53,14 +53,9 @@ class CalendarApiTest extends TestCase
 
         $response = $this->actingAs($user)->getJson(route('api.calendar', ['month' => '2026-11']));
 
+        // Exact, so ids are numbers and is_finished is a boolean (DEBT-04).
         $response->assertOk()
-            ->assertJsonCount(1, 'calendarData')
-            ->assertJsonCount(2, 'calendarData.2026-11-21.tasks')
-            ->assertJsonStructure(['calendarData' => ['2026-11-21' => [
-                'calendar_day' => ['id', 'note'],
-                'tasks' => [['id', 'description', 'is_finished', 'calendar_day_id', 'priority', 'order']],
-            ]]])
-            ->assertJson(['calendarData' => [
+            ->assertExactJson(['calendarData' => [
                 '2026-11-21' => [
                     'calendar_day' => ['id' => $day->id, 'note' => 'Gym at 6'],
                     'tasks' => [
@@ -95,5 +90,14 @@ class CalendarApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('calendarData.2026-11-03.calendar_day.note', 'Just a note')
             ->assertJsonPath('calendarData.2026-11-03.tasks', []);
+    }
+
+    public function test_calendar_data_is_an_empty_object_for_a_month_with_nothing_in_it(): void
+    {
+        $response = $this->actingAs(User::factory()->create())
+            ->getJson(route('api.calendar', ['month' => '2026-11']));
+
+        $response->assertOk();
+        $this->assertSame('{"calendarData":{}}', $response->getContent());
     }
 }

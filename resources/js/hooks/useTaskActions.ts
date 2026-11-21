@@ -37,7 +37,7 @@ export function useTaskActions({
 
                 updateData((prev) => ({
                     ...prev,
-                    calendar_day: { id: res.data.id, date: dateKey, note },
+                    calendar_day: { id: res.data.id, note },
                 }));
             } else {
                 const res = await axios.put(
@@ -99,7 +99,7 @@ export function useTaskActions({
     };
 
     // DELETE task
-    const handleDeleteTask = async (id: string) => {
+    const handleDeleteTask = async (id: number) => {
         try {
             const res = await axios.delete(`/tasks/${id}`);
 
@@ -117,7 +117,7 @@ export function useTaskActions({
     };
 
     // - check off task
-    const toggleFinishTask = async (id: string, is_finished: boolean) => {
+    const toggleFinishTask = async (id: number, is_finished: boolean) => {
         try {
             const res = await axios.put(`/tasks/${id}`, { is_finished });
 

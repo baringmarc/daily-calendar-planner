@@ -78,10 +78,10 @@ export function DayPanelContent({
     });
 
     // - drag logic
-    const [activeId, setActiveId] = useState<string | null>(null);
+    const [activeId, setActiveId] = useState<number | null>(null);
 
     function handleDragStart(event: DragStartEvent) {
-        setActiveId(event.active.id as string);
+        setActiveId(Number(event.active.id));
     }
 
     const handleDragEnd = (event: DragEndEvent) => {

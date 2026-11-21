@@ -15,8 +15,8 @@ export function SortableTask({
     actions: {
         currentEditTask: Task | null;
         setCurrentEditTask: React.Dispatch<React.SetStateAction<Task | null>>;
-        handleDeleteTask: (id: string) => Promise<void>;
-        toggleFinishTask: (id: string, is_finished: boolean) => Promise<void>;
+        handleDeleteTask: (id: number) => Promise<void>;
+        toggleFinishTask: (id: number, is_finished: boolean) => Promise<void>;
         toggleEditTask: (task: Task) => void;
     };
 }) {

@@ -6,6 +6,7 @@ use App\Http\Requests\CarryOverTasksRequest;
 use App\Http\Requests\ReorderTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
+use App\Http\Resources\TaskResource;
 use App\Models\Task;
 use App\Services\TaskService;
 use App\Support\UserClock;
@@ -26,7 +27,7 @@ class TaskController extends Controller
 
         $task = $this->taskService->create($data);
 
-        return response()->json($task, 201);
+        return (new TaskResource($task))->response()->setStatusCode(201);
     }
 
     /**
@@ -38,7 +39,7 @@ class TaskController extends Controller
 
         $task->update($request->validated());
 
-        return response()->json($task, 200);
+        return new TaskResource($task);
     }
 
     /**
@@ -63,14 +64,7 @@ class TaskController extends Controller
             UserClock::today($request)->toDateString(),
         );
 
-        $grouped = $tasks->groupBy('date')->map(fn ($tasks) => $tasks->map(fn (Task $task) => [
-            'id' => $task->id,
-            'description' => $task->description,
-            'is_finished' => $task->is_finished,
-            'calendar_day_id' => $task->calendar_day_id,
-            'priority' => $task->priority,
-            'order' => $task->order,
-        ])->values());
+        $grouped = $tasks->groupBy('date')->map(fn ($tasks) => TaskResource::collection($tasks->values()));
 
         return response()->json([
             'unfinishedTasks' => (object) $grouped->all(),
@@ -88,7 +82,7 @@ class TaskController extends Controller
             UserClock::today($request)->toDateString(),
         );
 
-        return response()->json($movedTasks, 200);
+        return TaskResource::collection($movedTasks);
     }
 
     /**

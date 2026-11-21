@@ -7,6 +7,7 @@ use App\Http\Resources\TaskResource;
 use App\Models\CalendarDay;
 use App\Support\UserClock;
 use Carbon\Carbon;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -34,8 +35,16 @@ class HomeController extends Controller
             return redirect()->route('verification.notice');
         }
 
+        // The visible month and open day live in the URL (?month=&day=), so
+        // refresh, back/forward and deep links work. A value that isn't a
+        // real date is ignored rather than rejected, and the calendar opens
+        // on the current month.
+        $day = self::dateFromQuery($request, 'day', 'Y-m-d');
+
         return Inertia::render('home', [
             'weekStartsOn' => self::weekStartsOn(),
+            'month' => self::dateFromQuery($request, 'month', 'Y-m') ?? ($day !== null ? substr($day, 0, 7) : null),
+            'day' => $day,
         ]);
     }
 
@@ -72,6 +81,28 @@ class HomeController extends Controller
             // An object even when empty, to match the frontend's CalendarData type.
             'calendarData' => (object) $calendarData->all(),
         ]);
+    }
+
+    /**
+     * The query parameter if it is a real date in the given format, else null.
+     */
+    private static function dateFromQuery(Request $request, string $key, string $format): ?string
+    {
+        $value = $request->query($key);
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        try {
+            $date = Carbon::createFromFormat('!'.$format, $value);
+        } catch (InvalidFormatException) {
+            return null;
+        }
+
+        // createFromFormat rolls invalid dates over (2026-02-30 -> March 2),
+        // so only accept a value that formats back to itself.
+        return $date?->format($format) === $value ? $value : null;
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class HomeTest extends TestCase
@@ -32,6 +33,73 @@ class HomeTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page->component('home'));
+    }
+
+    public function test_the_calendar_opens_on_the_current_month_without_a_query(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('home'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('home')
+                ->where('month', null)
+                ->where('day', null)
+            );
+    }
+
+    /**
+     * The visible month and open day come from the URL (UX-07).
+     */
+    public function test_the_month_and_day_are_read_from_the_query(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('home', ['month' => '2026-08', 'day' => '2026-07-31']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('month', '2026-08')
+                ->where('day', '2026-07-31')
+            );
+    }
+
+    public function test_a_day_without_a_month_opens_that_days_month(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('home', ['day' => '2026-11-21']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('month', '2026-11')
+                ->where('day', '2026-11-21')
+            );
+    }
+
+    /**
+     * @return array<string, array{array<string, mixed>}>
+     */
+    public static function invalidDateQueries(): array
+    {
+        return [
+            'garbage' => [['month' => 'garbage', 'day' => 'nope']],
+            'out of range' => [['month' => '2026-13', 'day' => '2026-02-30']],
+            'wrong format' => [['month' => '2026-1', 'day' => '21-11-2026']],
+            'arrays' => [['month' => ['2026-11'], 'day' => ['2026-11-21']]],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     */
+    #[DataProvider('invalidDateQueries')]
+    public function test_invalid_month_and_day_queries_are_ignored(array $query): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('home', $query))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('home')
+                ->where('month', null)
+                ->where('day', null)
+            );
     }
 
     public function test_guests_cannot_fetch_calendar_data(): void

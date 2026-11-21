@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import {
     keepPreviousData,
     useMutation,
@@ -30,6 +31,27 @@ const NO_UNFINISHED_TASKS: UnfinishedTasks = {};
 
 export const dayKey = (date: Date) => format(date, 'yyyy-MM-dd');
 
+// The date (yyyy-MM-dd) the carry-over prompt was last dismissed on. Storage
+// can be unavailable (private mode, SSR), in which case it isn't remembered.
+const dismissedKey = (userId: number) =>
+    `calendaily:carry-over-dismissed:${userId}`;
+
+function readDismissedOn(userId: number): string | null {
+    try {
+        return window.localStorage.getItem(dismissedKey(userId));
+    } catch {
+        return null;
+    }
+}
+
+function writeDismissedOn(userId: number, date: string) {
+    try {
+        window.localStorage.setItem(dismissedKey(userId), date);
+    } catch {
+        // Only remembered until the page is reloaded.
+    }
+}
+
 /**
  * The calendar data for the visible month, and the carry-over prompt.
  *
@@ -37,7 +59,8 @@ export const dayKey = (date: Date) => format(date, 'yyyy-MM-dd');
  * visited are cached and refetched in the background when shown again or
  * when the window regains focus. The unfinished tasks from earlier days are
  * fetched whenever the month view is shown (tasks may have been finished in
- * the day view), and a non-empty result opens the carry-over dialog.
+ * the day view), and a non-empty result opens the carry-over dialog, unless
+ * it was dismissed earlier today.
  */
 export function useCalendar({
     currentDate,
@@ -58,41 +81,47 @@ export function useCalendar({
         meta: { errorMessage: "Couldn't load the calendar" },
     });
 
+    // "Not now" (or carrying tasks over) hides the prompt for the rest of
+    // the day, in this browser (UX-08).
+    const userId = usePage().props.auth.user.id;
+    const today = dayKey(new Date());
+    const [dismissedOn, setDismissedOn] = useState(() =>
+        readDismissedOn(userId),
+    );
+    const isDismissedToday = dismissedOn === today;
+
+    const dismissForToday = () => {
+        setDismissedOn(today);
+        writeDismissedOn(userId, today);
+    };
+
     const unfinishedQuery = useQuery({
         queryKey: queryKeys.unfinishedTasks,
         queryFn: fetchUnfinishedTasks,
-        enabled: isMonthView,
-        // Refetched on every return to the month view instead. On focus it
-        // would reopen a dialog the user just dismissed.
+        // Fetched again on every return to the month view, since tasks may
+        // have been finished in the day view.
+        enabled: isMonthView && !isDismissedToday,
         refetchOnWindowFocus: false,
         meta: { errorMessage: "Couldn't check for unfinished tasks" },
     });
 
-    // The dialog is open for one fetch of the unfinished tasks: dismissing it
-    // remembers which fetch, and the next one (on returning to the month
-    // view) opens it again.
-    const [dismissedAt, setDismissedAt] = useState<number | null>(null);
     const unfinishedTasks = unfinishedQuery.data ?? NO_UNFINISHED_TASKS;
     const isCarryOverOpen =
         isMonthView &&
-        Object.keys(unfinishedTasks).length > 0 &&
-        dismissedAt !== unfinishedQuery.dataUpdatedAt;
+        !isDismissedToday &&
+        Object.keys(unfinishedTasks).length > 0;
 
     const setIsCarryOverOpen = (open: boolean) => {
         if (!open) {
-            setDismissedAt(unfinishedQuery.dataUpdatedAt);
+            dismissForToday();
         }
     };
 
     const carryOver = useMutation({
-        mutationFn: (tasks: UnfinishedTasks) =>
-            carryOverTasks(
-                Object.values(tasks)
-                    .flat()
-                    .map((task) => task.id),
-            ),
+        mutationFn: carryOverTasks,
         onSuccess: (moved) => {
-            queryClient.setQueryData(queryKeys.unfinishedTasks, {});
+            // The rest were left behind on purpose, so don't ask again today.
+            dismissForToday();
             toast.success(
                 moved.length === 1
                     ? 'Moved 1 task to today'
@@ -136,6 +165,7 @@ export function useCalendar({
         unfinishedTasks,
         isCarryOverOpen,
         setIsCarryOverOpen,
-        carryOverTasks: (tasks: UnfinishedTasks) => carryOver.mutate(tasks),
+        carryOverTasks: (ids: number[]) => carryOver.mutate(ids),
+        isCarryingOver: carryOver.isPending,
     };
 }

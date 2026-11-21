@@ -132,6 +132,7 @@ export default function Home({ weekStartsOn, month, day }: HomeProps) {
         isCarryOverOpen,
         setIsCarryOverOpen,
         carryOverTasks,
+        isCarryingOver,
     } = useCalendar({
         currentDate: monthStart,
         isMonthView: selectedDay === null,
@@ -149,6 +150,7 @@ export default function Home({ weekStartsOn, month, day }: HomeProps) {
                 onOpenChange={setIsCarryOverOpen}
                 unfinishedTasks={unfinishedTasks}
                 carryOverTasks={carryOverTasks}
+                isCarryingOver={isCarryingOver}
             />
             <AnimatePresence mode="wait">
                 {!selectedDay ? (

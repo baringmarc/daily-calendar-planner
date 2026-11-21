@@ -212,6 +212,11 @@ Current CI state (checked 2026-11-21, after Phases 0–4): `composer run ci:chec
 ### Small to medium
 - [ ] **FEAT-01: User settings for time zone and week start** · `M`. Detect the time zone on first login and store it on the user. Add a week-start setting under Settings (default Monday), used by both the API and the grid. This is the long-term fix for BUG-02 and BUG-04.
 - [ ] **FEAT-02: Move or snooze a task to another date** · `M` · ⭐ next up. "Move to tomorrow" or a date picker from the task menu, plus drag a task onto a calendar day. Needs a `PUT /api/tasks/{task}/move` endpoint.
+  - Done when:
+    - `PUT /api/tasks/{task}/move` takes `{ date: YYYY-MM-DD }`, finds or creates the user's day for that date, and appends the task after that day's tasks. It returns the task. Another user's task is a 403, an invalid date a 422, and moving a task to the day it's already on changes nothing.
+    - Each task in the day view has a "Move" menu with "Today" (unless it is already on today), "Tomorrow" (unless it is already on tomorrow) and "Pick a date…", which opens a date input. All of them work by keyboard and on touch.
+    - After a move, the task leaves the day it was on straight away, a toast says where it went ("Moved to Tue, Nov 24"), and the target day shows it in every view.
+    - In the week view (FEAT-10), a task can be dragged onto another day.
 - [ ] **FEAT-03: Natural-language quick add** · `M`. e.g. "Call Bob tomorrow !high" parses the date and priority.
 - [ ] **FEAT-04: Optional time and duration on tasks** · `M`. Optional due time or time block, with "all day" as the default. This conflicts with a spec non-goal, so it needs a scope decision.
 - [ ] **FEAT-05: Sort, filter and hide completed** · `S`. Sort by priority or status in the day view, and a "hide completed" toggle.
@@ -220,8 +225,20 @@ Current CI state (checked 2026-11-21, after Phases 0–4): `composer run ci:chec
 - [ ] ~~**FEAT-08: Carry-over history**~~ · not planned. We decided carry-over only moves tasks (spec decision D1). Kept here for reference: it would record `carried_from_date` / `carry_count` and show a "carried over ×3" badge.
 
 ### Larger
-- [ ] **FEAT-09: Recurring tasks** · `L` · ⭐ next up. Daily, weekdays, weekly or custom rules. Needs a design decision: generate task rows ahead of time, or expand them when the calendar is read.
+- [ ] **FEAT-09: Recurring tasks** · `L` · ⭐ next up. Daily, weekdays, weekly or custom rules. Needs a design decision: generate task rows ahead of time, or expand them when the calendar is read. _Decided: real task rows, created when the calendar is read (spec decision D6)._
+  - Done when:
+    - Adding a task offers a repeat rule: doesn't repeat (default), every day, every weekday, every week on that weekday, every month on that date, or custom (every N days, weeks or months, choosing the weekdays for weeks), with an optional end date. A weekly rule must include the day the task is added on (422 otherwise).
+    - A repeat rule is stored once (`recurring_tasks`), and its occurrences are ordinary tasks linked to it. Reading the calendar creates the missing occurrences from today up to the end of the range read, at most a year ahead. Past days are never backfilled, and an occurrence that was deleted or moved is not created again.
+    - Each occurrence can be finished, edited, reordered, moved and deleted on its own. Repeating tasks show a repeat icon and their rule ("Every weekday").
+    - Editing a repeating task can apply to that task only, or to it and the following occurrences (description, priority and the rule). Changing the rule replaces the unfinished occurrences after that task. An existing task can be made to repeat, and choosing "Doesn't repeat" stops the series after that task: later unfinished occurrences are deleted, and earlier ones are kept.
+    - Occurrences of a repeating task are never offered for carry-over (spec decision D7).
+    - Feature tests cover the rules, generation (range, horizon, no backfill, no re-creation), series edits, stopping, carry-over and authorization.
 - [ ] **FEAT-10: Week view and agenda/list view** · `L` · ⭐ next up. Alongside the month view, with a view switcher.
+  - Done when:
+    - The calendar header has a Month / Week / Agenda switcher, and the view is in the URL (`?view=week&week=yyyy-MM-dd`, `?view=agenda&month=yyyy-MM`), so refresh, back/forward and deep links work. The month view stays the default, with its current URLs.
+    - The week view shows the seven days of one week (starting on the configured week start) with every task, and moves a week at a time. Tasks can be checked off there, and dragged onto another day (FEAT-02). Clicking a day opens its day view, and its back button returns to the week.
+    - The agenda view lists the days of the month that have tasks or a note, plus today, in date order, with their tasks (which can be checked off) and the start of the note. An empty month says so. It pages a month at a time.
+    - Both views reuse the month's cached query, and work at phone width (the week view stacks its days).
 - [ ] **FEAT-11: Subtasks / checklists** · `M`
 - [ ] **FEAT-12: Tags, labels or projects with colours** · `M`
 - [ ] **FEAT-13: Rich-text or markdown notes, and a daily journal template** · `M`

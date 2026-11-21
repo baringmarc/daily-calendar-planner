@@ -283,6 +283,8 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 | D3 | New tasks default to **Medium** priority. | The add dialog changes from Low to Medium (DEBT-05). |
 | D5 | The data layer is **TanStack Query** (answers Q5). | Each month is a cached query refetched on focus, and mutations go through `useMutation`, which makes rollback (UX-01) and optimistic reordering (UX-04) straightforward (DEBT-08). |
 | D4 | First features after the fixes: **move/snooze a task** (FEAT-02), **recurring tasks** (FEAT-09), **week view** (FEAT-10). | These are next once phases 0–4 are done. |
+| D6 | Recurring tasks are stored as a rule plus **real task rows**, created when the calendar is read, from today up to the end of the range read (at most a year ahead). Past days are not backfilled. | Every task action works on occurrences unchanged. A rule keeps a watermark, so a deleted or moved occurrence isn't created again (FEAT-09). |
+| D7 | Unfinished occurrences of a recurring task are **not** offered for carry-over. | A missed repeat comes back by itself, so a week away doesn't fill the prompt with copies of it (FEAT-09). |
 
 ### Open questions
 

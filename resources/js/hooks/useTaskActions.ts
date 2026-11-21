@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ import {
     createTask,
     deleteTask,
     reorderTasks,
+    queryKeys,
     updateCalendarDay,
     updateTask,
 } from '@/lib/calendar-api';
@@ -38,6 +39,7 @@ export function useTaskActions({
     dayData: DayData;
     updateData: (updater: (prev: DayData) => DayData) => void;
 }) {
+    const queryClient = useQueryClient();
     const [taskDialog, setTaskDialog] = useState<TaskDialog>(null);
 
     const dateKey = format(date, 'yyyy-MM-dd');
@@ -155,13 +157,29 @@ export function useTaskActions({
         meta: { errorMessage: "Couldn't update the task" },
     });
 
+    // Optimistic: the new order shows at once, and goes back to the old one
+    // if the server rejects it (UX-04).
     const reorder = useMutation({
-        mutationFn: async (tasks: Task[]) => {
-            await reorderTasks(tasks.map((task) => task.id));
+        mutationFn: (tasks: Task[]) =>
+            reorderTasks(tasks.map((task) => task.id)),
+        onMutate: async (tasks) => {
+            // A refetch already in flight would land with the old order.
+            await queryClient.cancelQueries({ queryKey: queryKeys.calendar });
 
-            return tasks;
+            const previous = dayData.tasks;
+
+            updateData((prev) => ({
+                ...prev,
+                tasks: tasks.map((task, i) => ({ ...task, order: i + 1 })),
+            }));
+
+            return { previous };
         },
-        onSuccess: (tasks) => updateData((prev) => ({ ...prev, tasks })),
+        onError: (_error, _tasks, context) => {
+            if (context) {
+                updateData((prev) => ({ ...prev, tasks: context.previous }));
+            }
+        },
         meta: { errorMessage: "Couldn't reorder the tasks" },
     });
 

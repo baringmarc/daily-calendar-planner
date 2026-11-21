@@ -83,6 +83,8 @@ export function DayPanelContent({
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
 
+        setActiveId(null);
+
         if (!over || active.id === over.id) {
             return;
         }
@@ -90,10 +92,7 @@ export function DayPanelContent({
         const oldIndex = dayData.tasks.findIndex((t) => t.id === active.id);
         const newIndex = dayData.tasks.findIndex((t) => t.id === over.id);
 
-        const newTasks = arrayMove(dayData.tasks, oldIndex, newIndex);
-
-        setActiveId(null);
-        reorderTasks(newTasks);
+        reorderTasks(arrayMove(dayData.tasks, oldIndex, newIndex));
     };
 
     const hasContent =
@@ -176,6 +175,7 @@ export function DayPanelContent({
                 <DndContext
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
+                    onDragCancel={() => setActiveId(null)}
                     collisionDetection={closestCenter}
                 >
                     <DragOverlay>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CarryOverTasksRequest;
+use App\Http\Requests\ReorderTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
@@ -13,17 +14,17 @@ use Illuminate\Support\Facades\Gate;
 
 class TaskController extends Controller
 {
+    public function __construct(private TaskService $taskService) {}
+
     /**
      * Store a newly created resource in storage.
      */
     public function store(StoreTaskRequest $request)
     {
-        $taskService = new TaskService;
-
         $data = $request->validated();
-        $data['user_id'] = auth()->id();
+        $data['user_id'] = $request->user()->id;
 
-        $task = $taskService->create($data);
+        $task = $this->taskService->create($data);
 
         return response()->json($task, 201);
     }
@@ -57,9 +58,7 @@ class TaskController extends Controller
      */
     public function unfinished(Request $request)
     {
-        $taskService = new TaskService;
-
-        $tasks = $taskService->unfinishedTasksBefore(
+        $tasks = $this->taskService->unfinishedTasksBefore(
             $request->user(),
             UserClock::today($request)->toDateString(),
         );
@@ -83,9 +82,7 @@ class TaskController extends Controller
      */
     public function carryOverTasks(CarryOverTasksRequest $request)
     {
-        $taskService = new TaskService;
-
-        $movedTasks = $taskService->carryOverTasks(
+        $movedTasks = $this->taskService->carryOverTasks(
             $request->user(),
             $request->validated('task_ids'),
             UserClock::today($request)->toDateString(),
@@ -94,16 +91,13 @@ class TaskController extends Controller
         return response()->json($movedTasks, 200);
     }
 
-    public function reorder(UpdateTaskRequest $request)
+    /**
+     * Rewrite the order of one day's tasks.
+     */
+    public function reorder(ReorderTasksRequest $request)
     {
-        $taskService = new TaskService;
+        $this->taskService->reorderTasks($request->user(), $request->taskIds());
 
-        if (! $request->has('tasks') || ! is_array($request->input('tasks'))) {
-            return response()->json(['message' => 'Invalid tasks data'], 400);
-        }
-
-        $updatedTasks = $taskService->reorderTasks($request->user(), $request->input('tasks'));
-
-        return response()->json($updatedTasks, 200);
+        return response()->json(['message' => 'Tasks reordered successfully'], 200);
     }
 }

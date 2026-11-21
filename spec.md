@@ -233,7 +233,7 @@ Body: `{ date: YYYY-MM-DD, note: string|null (≤500) }`. One per user per date.
 Body: `{ note: string|null (≤500) }`. **200** with the day.
 
 #### `PUT /api/tasks/reorder`
-Body: `{ tasks: [{ id }, ...] }`, all from the same calendar day and in the new order. Rewrites `order` as `1..n`. **200**.
+Body: `{ tasks: [{ id }, ...] }` (at least one, no duplicates), all from the same calendar day and in the new order. Rewrites `order` as `1..n` in one query. **200**. **403** if any task isn't the user's, **422** for an invalid body, an unknown id, or tasks from more than one day (`ReorderTasksRequest`).
 
 #### `GET /api/tasks/unfinished`
 Returns `{ unfinishedTasks: { [date]: Task[] } }`: the user's unfinished tasks on days strictly before today (in the user's time zone), from any month. Dates are oldest first, and tasks within a date follow `order`. An empty result is `{}`.

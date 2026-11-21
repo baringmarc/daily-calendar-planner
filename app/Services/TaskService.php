@@ -96,26 +96,38 @@ class TaskService
     }
 
     /**
-     * Rewrite `order` as 1..n following the given task order.
+     * Rewrite `order` as 1..n following the given task ids, in one query.
      *
-     * The whole request is rejected if any of the ids doesn't belong to the user.
+     * The whole request is rejected with a 403 if any id isn't the user's,
+     * and with a 422 if the tasks aren't all on the same day.
+     *
+     * @param  list<int>  $taskIds
      */
-    public function reorderTasks(User $user, array $tasks)
+    public function reorderTasks(User $user, array $taskIds): void
     {
-        if (empty($tasks)) {
-            return [];
+        if ($taskIds === []) {
+            return;
         }
 
-        $taskIds = array_map(fn ($task) => $task['id'], $tasks);
-
-        return DB::transaction(function () use ($user, $taskIds) {
+        DB::transaction(function () use ($user, $taskIds) {
             $this->ensureUserOwnsTasks($user, $taskIds);
 
-            foreach ($taskIds as $index => $taskId) {
-                $this->tasksOwnedBy($user)
-                    ->whereKey($taskId)
-                    ->update(['order' => $index + 1]);
+            $dayCount = Task::whereIn('id', $taskIds)->distinct()->count('calendar_day_id');
+
+            if ($dayCount !== 1) {
+                throw ValidationException::withMessages([
+                    'tasks' => 'Only tasks from the same day can be reordered together.',
+                ]);
             }
+
+            // The ids are validated integers, so they are safe to inline.
+            $cases = collect($taskIds)
+                ->map(fn (int $id, int $index) => sprintf('WHEN %d THEN %d', $id, $index + 1))
+                ->implode(' ');
+
+            Task::whereIn('id', $taskIds)->update([
+                'order' => DB::raw("CASE id {$cases} END"),
+            ]);
         });
     }
 

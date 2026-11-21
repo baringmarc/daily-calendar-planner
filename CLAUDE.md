@@ -44,11 +44,11 @@ Work is tracked by the stable task IDs in [tasks.md](tasks.md) (`CI-01`, `SEC-01
 - `/tasks` (store/update/destroy) and `/calendar-days` (store/update) are resource routes restricted with `->only()`. They return JSON, not Inertia responses.
 - `GET /api/tasks/unfinished` returns `{ unfinishedTasks: { [date]: Task[] } }`: the user's unfinished tasks on days strictly before today, from any month, oldest first.
 - `POST /api/tasks/carry-over` (`CarryOverTasksRequest`) takes `{ task_ids }` and appends those tasks to the user's day for today, which the server finds or creates. It returns 403 if any id isn't the user's and 422 if any task is finished or not from a past day.
-- `PUT /api/tasks/reorder` takes the tasks in their new order and rewrites `order` as 1..n.
+- `PUT /api/tasks/reorder` (`ReorderTasksRequest`) takes one day's tasks in their new order and rewrites `order` as 1..n in a single `CASE` update. It returns 422 if the tasks span more than one day.
 
 **Time zone.** The browser sends its IANA zone in an `X-Timezone` header on every axios request (set in `resources/js/app.tsx`). Server code that needs "today" must use `App\Support\UserClock::today($request)`, which falls back to `config('app.timezone')` (UTC) for a missing or invalid header. Never call `now()` for the user's date.
 
-Business logic lives in `app/Services/TaskService.php`, and controllers create it with `new TaskService()`.
+Business logic lives in `app/Services/TaskService.php`, which `TaskController` receives through constructor injection.
 
 **Frontend flow.** `resources/js/pages/home.tsx` owns the calendar state (`calendar: CalendarData`), fetches the calendar again whenever the month changes, fetches `/api/tasks/unfinished` whenever the month view is shown (a non-empty result opens `UnfinishedTasksDialog`), and switches between the month grid and the selected day (`DayPanelContent`). `hooks/useTaskActions.ts` makes the per-day mutation calls and updates local state optimistically through an `updateData(prev => next)` callback. It does not fetch again. Drag-and-drop reordering uses `@dnd-kit` in `day-panel-content.tsx` / `sortable-task.tsx`. Priority labels and colours come from `resources/js/constants/priority.ts`.
 

@@ -57,6 +57,28 @@ export async function deleteTask(id: number): Promise<void> {
     await axios.delete(TaskController.destroy.url(id));
 }
 
+/**
+ * A delete that survives the page unloading, which cancels axios requests.
+ * Sends the same headers axios would, including Laravel's XSRF token.
+ */
+export function deleteTaskOnUnload(id: number): void {
+    const xsrf = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        ?.slice('XSRF-TOKEN='.length);
+
+    void fetch(TaskController.destroy.url(id), {
+        method: 'DELETE',
+        keepalive: true,
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            ...(xsrf ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrf) } : {}),
+        },
+    });
+}
+
 /** `ids` are one day's tasks in their new order. */
 export async function reorderTasks(ids: number[]): Promise<void> {
     await axios.put(TaskController.reorder.url(), {

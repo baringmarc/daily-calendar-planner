@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import type { TaskFormValues } from '@/components/task-form-dialog';
 import {
     createCalendarDay,
@@ -11,7 +12,15 @@ import {
     updateTask,
 } from '@/lib/calendar-api';
 import { validationErrors } from '@/lib/errors';
+import {
+    cancelDelete,
+    commitDelete,
+    scheduleDelete,
+} from '@/lib/pending-deletes';
 import type { DayData, Task } from '@/types';
+
+// How long a deleted task can be brought back before the delete is sent.
+const UNDO_DELETE_MS = 5000;
 
 // Which task dialog is open: adding a new task, or editing one.
 type TaskDialog = { task: Task | null } | null;
@@ -81,19 +90,63 @@ export function useTaskActions({
         },
     });
 
+    // Sent once the undo window has passed (see deleteWithUndo). The task
+    // has already left the list, so success has nothing left to patch.
     const removeTask = useMutation({
-        mutationFn: async (id: number) => {
-            await deleteTask(id);
-
-            return id;
-        },
-        onSuccess: (id) =>
-            updateData((prev) => ({
-                ...prev,
-                tasks: prev.tasks.filter((t) => t.id !== id),
-            })),
+        mutationFn: deleteTask,
         meta: { errorMessage: "Couldn't delete the task" },
     });
+
+    // Hides the task straight away and offers an undo for a few seconds
+    // before the delete is sent (UX-02).
+    const deleteWithUndo = (task: Task) => {
+        let index = -1;
+
+        updateData((prev) => {
+            index = prev.tasks.findIndex((t) => t.id === task.id);
+
+            return {
+                ...prev,
+                tasks: prev.tasks.filter((t) => t.id !== task.id),
+            };
+        });
+
+        const toastId = `delete-task-${task.id}`;
+
+        scheduleDelete(task.id, UNDO_DELETE_MS, () => {
+            toast.dismiss(toastId);
+            removeTask.mutate(task.id);
+        });
+
+        toast('Task deleted', {
+            id: toastId,
+            description: task.description,
+            duration: UNDO_DELETE_MS,
+            action: {
+                label: 'Undo',
+                onClick: () => {
+                    if (!cancelDelete(task.id)) {
+                        return;
+                    }
+
+                    // Back into its old place, unless a refetch already
+                    // brought it back.
+                    updateData((prev) => {
+                        if (prev.tasks.some((t) => t.id === task.id)) {
+                            return prev;
+                        }
+
+                        const tasks = [...prev.tasks];
+                        tasks.splice(index, 0, task);
+
+                        return { ...prev, tasks };
+                    });
+                },
+            },
+            // Closing the toast means "yes, delete it".
+            onDismiss: () => commitDelete(task.id),
+        });
+    };
 
     const toggleFinished = useMutation({
         mutationFn: (task: Task) =>
@@ -151,7 +204,7 @@ export function useTaskActions({
         taskErrors: validationErrors(saveTask.error),
         // Actions
         updateNotes,
-        deleteTask: (task: Task) => removeTask.mutate(task.id),
+        deleteTask: deleteWithUndo,
         toggleFinished: (task: Task) => toggleFinished.mutate(task),
         // `tasks` is the day's whole list in its new order.
         reorderTasks: (tasks: Task[]) => reorder.mutate(tasks),

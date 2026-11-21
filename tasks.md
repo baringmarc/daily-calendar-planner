@@ -1,6 +1,6 @@
 # Calendaily: Tasks
 
-_Last updated: 2026-11-21_ · Behaviour is defined in [spec.md](spec.md).
+_Last updated: 2026-11-22_ · Behaviour is defined in [spec.md](spec.md).
 
 This is every known bug, cleanup and feature idea from the 2026-11-21 project review, grouped into phases in the order we plan to tackle them. Tick a box when its task is merged into `develop`.
 
@@ -18,7 +18,7 @@ This is every known bug, cleanup and feature idea from the 2026-11-21 project re
 | 4 | UX polish | UX-01 – UX-12 |
 | 5 | Feature backlog (to discuss) | FEAT-01 – FEAT-19 |
 
-Current CI state (checked 2026-11-21, after Phases 0–4): `composer run ci:check` passes, with **125 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
+Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-02, FEAT-09 and FEAT-10): `composer run ci:check` passes, with **155 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
 
 ---
 
@@ -211,7 +211,7 @@ Current CI state (checked 2026-11-21, after Phases 0–4): `composer run ci:chec
 
 ### Small to medium
 - [ ] **FEAT-01: User settings for time zone and week start** · `M`. Detect the time zone on first login and store it on the user. Add a week-start setting under Settings (default Monday), used by both the API and the grid. This is the long-term fix for BUG-02 and BUG-04.
-- [ ] **FEAT-02: Move or snooze a task to another date** · `M` · ⭐ next up. "Move to tomorrow" or a date picker from the task menu, plus drag a task onto a calendar day. Needs a `PUT /api/tasks/{task}/move` endpoint.
+- [x] **FEAT-02: Move or snooze a task to another date** · `M` · ⭐ next up. "Move to tomorrow" or a date picker from the task menu, plus drag a task onto a calendar day. Needs a `PUT /api/tasks/{task}/move` endpoint.
   - Done when:
     - `PUT /api/tasks/{task}/move` takes `{ date: YYYY-MM-DD }`, finds or creates the user's day for that date, and appends the task after that day's tasks. It returns the task. Another user's task is a 403, an invalid date a 422, and moving a task to the day it's already on changes nothing.
     - Each task in the day view has a "Move" menu with "Today" (unless it is already on today), "Tomorrow" (unless it is already on tomorrow) and "Pick a date…", which opens a date input. All of them work by keyboard and on touch.
@@ -225,7 +225,7 @@ Current CI state (checked 2026-11-21, after Phases 0–4): `composer run ci:chec
 - [ ] ~~**FEAT-08: Carry-over history**~~ · not planned. We decided carry-over only moves tasks (spec decision D1). Kept here for reference: it would record `carried_from_date` / `carry_count` and show a "carried over ×3" badge.
 
 ### Larger
-- [ ] **FEAT-09: Recurring tasks** · `L` · ⭐ next up. Daily, weekdays, weekly or custom rules. Needs a design decision: generate task rows ahead of time, or expand them when the calendar is read. _Decided: real task rows, created when the calendar is read (spec decision D6)._
+- [x] **FEAT-09: Recurring tasks** · `L` · ⭐ next up. Daily, weekdays, weekly or custom rules. Needs a design decision: generate task rows ahead of time, or expand them when the calendar is read. _Decided: real task rows, created when the calendar is read (spec decision D6)._
   - Done when:
     - Adding a task offers a repeat rule: doesn't repeat (default), every day, every weekday, every week on that weekday, every month on that date, or custom (every N days, weeks or months, choosing the weekdays for weeks), with an optional end date. A weekly rule must include the day the task is added on (422 otherwise).
     - A repeat rule is stored once (`recurring_tasks`), and its occurrences are ordinary tasks linked to it. Reading the calendar creates the missing occurrences from today up to the end of the range read, at most a year ahead. Past days are never backfilled, and an occurrence that was deleted or moved is not created again.
@@ -233,7 +233,7 @@ Current CI state (checked 2026-11-21, after Phases 0–4): `composer run ci:chec
     - Editing a repeating task can apply to that task only, or to it and the following occurrences (description, priority and the rule). Changing the rule replaces the unfinished occurrences after that task. An existing task can be made to repeat, and choosing "Doesn't repeat" stops the series after that task: later unfinished occurrences are deleted, and earlier ones are kept.
     - Occurrences of a repeating task are never offered for carry-over (spec decision D7).
     - Feature tests cover the rules, generation (range, horizon, no backfill, no re-creation), series edits, stopping, carry-over and authorization.
-- [ ] **FEAT-10: Week view and agenda/list view** · `L` · ⭐ next up. Alongside the month view, with a view switcher.
+- [x] **FEAT-10: Week view and agenda/list view** · `L` · ⭐ next up. Alongside the month view, with a view switcher.
   - Done when:
     - The calendar header has a Month / Week / Agenda switcher, and the view is in the URL (`?view=week&week=yyyy-MM-dd`, `?view=agenda&month=yyyy-MM`), so refresh, back/forward and deep links work. The month view stays the default, with its current URLs.
     - The week view shows the seven days of one week (starting on the configured week start) with every task, and moves a week at a time. Tasks can be checked off there, and dragged onto another day (FEAT-02). Clicking a day opens its day view, and its back button returns to the week.

@@ -18,7 +18,7 @@ This is every known bug, cleanup and feature idea from the 2026-11-21 project re
 | 4 | UX polish | UX-01 – UX-12 |
 | 5 | Feature backlog (to discuss) | FEAT-01 – FEAT-19 |
 
-Current CI state (checked 2026-11-21, after Phases 0–2): `composer run ci:check` passes, with **88 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
+Current CI state (checked 2026-11-21, after Phases 0–3): `composer run ci:check` passes, with **118 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
 
 ---
 
@@ -114,42 +114,42 @@ Current CI state (checked 2026-11-21, after Phases 0–2): `composer run ci:chec
 
 ## Phase 3: Tech debt
 
-- [ ] **DEBT-01: Feature tests and factories for the domain** · `M`
+- [x] **DEBT-01: Feature tests and factories for the domain** · `M`
   - Fill in `TaskFactory`, and add `CalendarDayFactory` with states (finished, priority, past/future date).
   - Feature tests for `GET /api/calendar` (range and shape), task CRUD, notes, reorder and carry-over.
 
-- [ ] **DEBT-02: Remove dead code and unused routes** · `S`
+- [x] **DEBT-02: Remove dead code and unused routes** · `S`
   - Empty `index/create/show/edit/destroy` methods in [TaskController.php](app/Http/Controllers/TaskController.php) and [CalendarDayController.php](app/Http/Controllers/CalendarDayController.php). Restrict the resource routes with `->only([...])` to what's used.
   - `$request['user_id'] = auth()->id();` in `CalendarDayController@store`, which has no effect.
   - The empty [use-calendar.tsx](resources/js/hooks/use-calendar.tsx), the stale `TaskActions` type in [types/calendar.ts](resources/js/types/calendar.ts), the commented-out nav in [app-sidebar.tsx](resources/js/components/app-sidebar.tsx), and unused imports.
   - Manual `MAX_TASK_DESC_LENGTH` truncation in [home.tsx](resources/js/pages/home.tsx), which duplicates CSS `truncate`.
 
-- [ ] **DEBT-03: Dedicated Form Requests and dependency injection** · `S`
+- [x] **DEBT-03: Dedicated Form Requests and dependency injection** · `S`
   - `ReorderTasksRequest` (`tasks` array, `tasks.*.id` exists) and `CarryOverTasksRequest` (`task_ids` array), instead of reusing `UpdateTaskRequest` with manual `has()` checks.
   - Inject `TaskService` through the constructor instead of `new TaskService()`.
   - `bulkUpdate` runs one `find` per task. Use a single scoped query, or `upsert`.
 
-- [ ] **DEBT-04: Model casts, relations and consistent types** · `S`
+- [x] **DEBT-04: Model casts, relations and consistent types** · `S`
   - `Task::casts()`: `is_finished` → bool, `priority` → int (or an enum, see DEBT-05).
   - Add `CalendarDay::user()` and `User::tasks()` (hasManyThrough).
   - Frontend `Task.id` / `calendar_day_id` are typed `string`, but the API returns numbers.
   - Return API resources (`TaskResource`, `CalendarDayResource`) instead of hand-built arrays in `HomeController@calendar`.
 
-- [ ] **DEBT-05: One shared priority definition** · `S`
+- [x] **DEBT-05: One shared priority definition** · `S`
   - A PHP `Priority` enum used for validation, casts and the DB default, plus the TS constants generated from it or kept in sync.
   - Make the add dialog default to **Medium**, matching the DB default (spec decision D3).
   - Rename the "Urgent!" label to "Urgent" to match the spec.
 
-- [ ] **DEBT-06: Use Wayfinder instead of hardcoded URLs** · `S`
+- [x] **DEBT-06: Use Wayfinder instead of hardcoded URLs** · `S`
   - Replace the axios string URLs in [useTaskActions.ts](resources/js/hooks/useTaskActions.ts), [day-panel-content.tsx](resources/js/components/day-panel-content.tsx) and [home.tsx](resources/js/pages/home.tsx) with Wayfinder actions. One of them, `api/tasks/reorder`, is relative (no leading `/`) and breaks on any nested URL.
 
-- [ ] **DEBT-07: Split up `home.tsx`** · `M`
+- [x] **DEBT-07: Split up `home.tsx`** · `M`
   - Extract `CalendarHeader`, `MonthGrid`, `DayCell` and `DayView`, and move fetching and carry-over logic into a hook (`useCalendar`).
 
-- [ ] **DEBT-08: Decide on the data-fetching approach** · `M` · _needs discussion (spec Q5)_
+- [x] **DEBT-08: Decide on the data-fetching approach** · `M` · _decided: TanStack Query (spec decision D5)_
   - Options: TanStack Query (caching, optimistic updates with rollback, refetch on focus), or Inertia props with partial reloads, instead of hand-rolled axios and `useState`. This makes UX-01 and UX-04 easier.
 
-- [ ] **DEBT-09: Small render-performance fixes** · `S`
+- [x] **DEBT-09: Small render-performance fixes** · `S`
   - `calendarDays` `useMemo` depends on `startDate`/`endDate` Date objects that are recreated on every render, so it never memoises. Use the month key as the dependency.
   - `emptyDayData` is recreated on every render. Hoist it to module scope.
 

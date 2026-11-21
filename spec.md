@@ -75,12 +75,12 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 - **Order:** tasks in a day are shown in ascending `order`. A new task goes to the bottom (`max(order) + 1`). Reordering rewrites the day's orders as `1..n`.
 
 ### 3.3 "Today" and time zones
-- "Today" is the current date **in the user's time zone**. The backend and frontend must agree on it. ⚠️ [BUG-04](tasks.md)
+- "Today" is the current date **in the user's time zone**. The backend and frontend must agree on it. Until it is stored on the user ([FEAT-01](tasks.md)), the browser sends its time zone with every request.
 - Until a per-user setting exists, a single app-level time zone is used consistently on both sides. ⬜ [FEAT-01](tasks.md)
 
 ### 3.4 Week layout
 - The month grid shows complete weeks: from the start of the week containing the 1st to the end of the week containing the last day.
-- A month needs 4, 5 or 6 rows. The grid must fit all of them. ⚠️ [BUG-03](tasks.md)
+- A month needs 4, 5 or 6 rows. The grid must fit all of them.
 - The week starts on **Monday** ([decision D2](#9-decisions-and-open-questions)). The weekday headers run Mon → Sun, and the backend's date range uses the same week start as the frontend grid. Both read it from `config/calendar.php`, which reaches the frontend as the `weekStartsOn` prop. A user-selectable week start is planned, defaulting to Monday. ⬜ [FEAT-01](tasks.md)
 
 ### 3.5 Carry-over
@@ -99,10 +99,10 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 
 | ID | Requirement | Status |
 |---|---|---|
-| FR-A1 | Users can register, log in, log out, reset their password and verify their email. | ⚠️ After login and registration, Fortify redirects to `/home`, which does not exist ([BUG-01](tasks.md)) |
+| FR-A1 | Users can register, log in, log out, reset their password and verify their email. | ✅ |
 | FR-A2 | Users can enable two-factor authentication (TOTP with recovery codes). | ✅ |
 | FR-A3 | Users can update their profile and password, delete their account, and choose light, dark or system appearance. | ✅ |
-| FR-A4 | Guests visiting `/` see the welcome page. Signed-in users visiting `/` see the calendar. | ⚠️ The welcome route is shadowed ([CI-02](tasks.md)) |
+| FR-A4 | Guests visiting `/` see the welcome page. Signed-in users visiting `/` see the calendar. | ✅ |
 | FR-A5 | Deleting an account deletes all of its calendar days and tasks (cascade). | ✅ |
 
 ### 4.2 Month view
@@ -287,5 +287,5 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 
 | # | Question | Options / notes |
 |---|---|---|
-| Q3 | Where should the time zone come from? | Browser-detected and saved on the user (proposed), or chosen in settings. Needed for BUG-04 / FEAT-01. |
+| Q3 | Where should the time zone come from? | Browser-detected and saved on the user (proposed), or chosen in settings. BUG-04 uses the browser's zone per request for now; storing it is FEAT-01. |
 | Q5 | Should the data layer stay as axios + local state, or move to TanStack Query / Inertia partial reloads? | See DEBT-08. |

@@ -24,13 +24,14 @@ class TaskService
 
             // -- create the Task
             $currentHighestOrder = Task::where('calendar_day_id', $day->id)->max('order') ?? 0;
+
             return Task::create([
                 'calendar_day_id' => $day->id,
                 'user_id' => $data['user_id'],
                 'description' => $data['description'],
                 'is_finished' => 0,
                 'priority' => $data['priority'],
-                'order' => $currentHighestOrder + 1
+                'order' => $currentHighestOrder + 1,
             ]);
         });
     }
@@ -38,7 +39,7 @@ class TaskService
     public function carryOverTasks(array $taskIds, $targetCalendarDayId)
     {
         return DB::transaction(function () use ($taskIds, $targetCalendarDayId) {
-            if (!$targetCalendarDayId) {
+            if (! $targetCalendarDayId) {
                 // If no target day is provided, create/find today's calendar day
                 $today = Carbon::now('Asia/Manila')->format('Y-m-d');
                 $targetDay = CalendarDay::firstOrCreate([
@@ -54,16 +55,17 @@ class TaskService
         });
     }
 
-    public function reorderTasks($tasks) {
+    public function reorderTasks($tasks)
+    {
         if (empty($tasks)) {
             return [];
         }
 
         $orderedTasks = [];
-        foreach($tasks as $index => $task) {
+        foreach ($tasks as $index => $task) {
             $orderedTasks[] = [
                 'id' => $task['id'],
-                'order' => $index + 1
+                'order' => $index + 1,
             ];
         }
 

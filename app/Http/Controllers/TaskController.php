@@ -30,8 +30,8 @@ class TaskController extends Controller
      */
     public function store(StoreTaskRequest $request)
     {
-        $taskService = new TaskService();
-        
+        $taskService = new TaskService;
+
         $data = $request->validated();
         $data['user_id'] = auth()->id();
 
@@ -72,15 +72,16 @@ class TaskController extends Controller
     public function destroy(Task $task)
     {
         $task->delete();
+
         return response()->json(['message' => 'Task deleted successfully'], 200);
     }
 
     // - carry over tasks from previous days
     public function carryOverTasks(UpdateTaskRequest $request)
     {
-        $taskService = new TaskService();
-        
-        if (!$request->has('tasks') || !is_array($request->input('tasks'))) {
+        $taskService = new TaskService;
+
+        if (! $request->has('tasks') || ! is_array($request->input('tasks'))) {
             return response()->json(['message' => 'Invalid tasks data'], 400);
         }
 
@@ -88,8 +89,8 @@ class TaskController extends Controller
         $updatedTasks = [];
         $todayCalendarDayId = $request->input('calendar_day_id') ?? null;
 
-        foreach($tasks as $day) {
-            foreach($day as $task) {
+        foreach ($tasks as $day) {
+            foreach ($day as $task) {
                 $taskIds[] = $task['id'];
             }
         }
@@ -99,10 +100,11 @@ class TaskController extends Controller
         return response()->json($updatedTasks, 200);
     }
 
-    public function reorder(UpdateTaskRequest $request) {
-        $taskService = new TaskService();
+    public function reorder(UpdateTaskRequest $request)
+    {
+        $taskService = new TaskService;
 
-        if (!$request->has('tasks') || !is_array($request->input('tasks'))) {
+        if (! $request->has('tasks') || ! is_array($request->input('tasks'))) {
             return response()->json(['message' => 'Invalid tasks data'], 400);
         }
 

@@ -1,8 +1,8 @@
+import { Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
-import { Sun, Moon } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { Button } from './ui/button';
 
 export function AppSidebarHeader({

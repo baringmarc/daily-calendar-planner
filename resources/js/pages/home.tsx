@@ -1,6 +1,4 @@
-import AppLayout from '@/layouts/app-layout';
-import type { DayData, CalendarData, Task, UnfinishedTasks } from '@/types';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import {
     format,
     addMonths,
@@ -14,9 +12,10 @@ import {
     endOfWeek,
     setMonth,
     setYear,
-    set,
 } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { DayPanelContent } from '@/components/day-panel-content';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -27,11 +26,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import axios from 'axios';
 import { Spinner } from '@/components/ui/spinner';
 import { UnfinishedTasksDialog } from '@/components/unfinished-tasks-dialog';
+import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
+import type { DayData, CalendarData, Task, UnfinishedTasks } from '@/types';
 
 export default function Home() {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -113,7 +112,7 @@ export default function Home() {
         });
 
         return result;
-    }, [calendar]);
+    }, [calendar, todaysCalendarDayId]);
 
     // - check if there are unfinished tasks from previous days
     useEffect(() => {
@@ -146,6 +145,7 @@ export default function Home() {
         const key = format(date, 'yyyy-MM-dd');
         setCalendar((prev) => {
             const currentData = prev[key] ?? emptyDayData;
+
             return { ...prev, [key]: updater(currentData) };
         });
     };
@@ -277,7 +277,7 @@ export default function Home() {
 
                                 {/* Days Grid */}
                                 <div className="grid flex-1 grid-cols-7 grid-rows-5 overflow-y-auto">
-                                    {calendarDays.map((day, i) => {
+                                    {calendarDays.map((day) => {
                                         const dayKey = format(
                                             day,
                                             'yyyy-MM-dd',
@@ -303,10 +303,6 @@ export default function Home() {
                                             day,
                                             monthStart,
                                         );
-
-                                        const finishedAllTasks =
-                                            totaltasks > 0 &&
-                                            donetasks === totaltasks;
 
                                         return (
                                             <div

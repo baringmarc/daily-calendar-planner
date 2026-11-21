@@ -1,3 +1,4 @@
+import { Square } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -7,10 +8,8 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Task, UnfinishedTasks } from '@/types/calendar';
-import { Square } from 'lucide-react';
+import type { Task, UnfinishedTasks } from '@/types/calendar';
 
 export function UnfinishedTasksDialog({
     open = false,

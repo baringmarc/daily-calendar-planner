@@ -32,16 +32,17 @@ class HomeController extends Controller
         return Inertia::render('home');
     }
 
-    public function calendar(Request $request) {
+    public function calendar(Request $request)
+    {
         $month = $request->input('month') ?? Carbon::now()->format('Y-m');
         $baseDate = Carbon::parse($month);
 
         $startOfMonth = $baseDate->copy()->startOfMonth();
         $endOfMonth = $baseDate->copy()->endOfMonth();
-        
+
         $startDate = $startOfMonth->copy()->startOfWeek();
         $endDate = $endOfMonth->copy()->endOfWeek();
-        
+
         $User = $request->user();
 
         $calendarData = $User->calendarDays()
@@ -49,8 +50,8 @@ class HomeController extends Controller
             ->with('tasks')
             ->orderBy('date', 'desc')
             ->get();
-        
-        //- prepare calendar data        
+
+        // - prepare calendar data
         $calendarData = $calendarData->mapWithKeys(function ($day) {
             $tasks = $day->tasks->map(function ($task) use ($day) {
 
@@ -60,7 +61,7 @@ class HomeController extends Controller
                     'is_finished' => $task->is_finished,
                     'calendar_day_id' => $day->id,
                     'priority' => $task->priority,
-                    'order' => $task->order
+                    'order' => $task->order,
                 ];
 
             })->toArray();
@@ -77,8 +78,7 @@ class HomeController extends Controller
         })->toArray();
 
         return response()->json([
-            'calendarData' => $calendarData
+            'calendarData' => $calendarData,
         ]);
     }
-
 }

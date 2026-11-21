@@ -1,18 +1,11 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'framer-motion';
+import { CheckCircle2, Circle, Trash2, SquarePen, Logs } from 'lucide-react';
+import { PRIORITY_MAP, PRIORITY_STYLES } from '@/constants/priority';
 import { cn } from '@/lib/utils';
-import {
-    CheckCircle2,
-    Circle,
-    Plus,
-    Trash2,
-    SquarePen,
-    Logs,
-} from 'lucide-react';
 
 import type { Task } from '@/types';
-import { PRIORITY_MAP, PRIORITY_STYLES } from '@/constants/priority';
 
 export function SortableTask({
     task,

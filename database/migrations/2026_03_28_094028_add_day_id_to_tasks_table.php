@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::table('tasks', function (Blueprint $table) {
             $table->foreignId('calendar_day_id')->constrained()->onDelete('cascade');
-            
+
             $table->dropForeign(['user_id']);
             $table->dropColumn('user_id');
-            
+
             $table->dropColumn('date');
         });
     }

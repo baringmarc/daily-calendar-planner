@@ -1,25 +1,23 @@
-import type { DayData, Task } from '@/types';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
-import { AlignLeft, CalendarIcon, CheckSquare, Plus } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { Progress } from './ui/progress';
-
-import { useTaskActions } from '@/hooks/useTaskActions';
-
-import { AddTaskDialog } from '@/components/add-task-dialog';
-import { EditTaskDialog } from '@/components/edit-task-dialog';
 
 import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
 import {
     SortableContext,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { SortableTask } from '@/components/sortable-task';
 import { arrayMove } from '@dnd-kit/sortable';
 
 import axios from 'axios';
+import { AlignLeft, CalendarIcon, CheckSquare, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { AddTaskDialog } from '@/components/add-task-dialog';
+import { EditTaskDialog } from '@/components/edit-task-dialog';
+import { SortableTask } from '@/components/sortable-task';
+import { useTaskActions } from '@/hooks/useTaskActions';
+import type { DayData, Task } from '@/types';
+import { Button } from './ui/button';
+import { Progress } from './ui/progress';
+import { Textarea } from './ui/textarea';
 
 // --- Day Panel Content Component ---
 export function DayPanelContent({
@@ -64,7 +62,9 @@ export function DayPanelContent({
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
 
-        if (!over || active.id === over.id) return;
+        if (!over || active.id === over.id) {
+            return;
+        }
 
         const oldIndex = dayData.tasks.findIndex((t) => t.id === active.id);
         const newIndex = dayData.tasks.findIndex((t) => t.id === over.id);
@@ -80,7 +80,10 @@ export function DayPanelContent({
             const res = await axios.put(`api/tasks/reorder`, {
                 tasks: tasks,
             });
-            if (res.status !== 200) throw new Error();
+
+            if (res.status !== 200) {
+                throw new Error();
+            }
 
             updateData((prev) => ({
                 ...prev,
@@ -96,7 +99,7 @@ export function DayPanelContent({
         setNewTask('');
         setIsAddingTask(false);
         setCurrentEditTask(null);
-    }, [date]);
+    }, [date, setNewTask, setIsAddingTask, setCurrentEditTask]);
 
     const hasContent =
         !!dayData?.calendar_day?.note || dayData.tasks.length > 0;

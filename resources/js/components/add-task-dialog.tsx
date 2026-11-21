@@ -9,9 +9,9 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Input } from './ui/input';
-import { cn } from '@/lib/utils';
 import { PRIORITY_MAP } from '@/constants/priority';
+import { cn } from '@/lib/utils';
+import { Input } from './ui/input';
 
 export function AddTaskDialog({
     open = false,

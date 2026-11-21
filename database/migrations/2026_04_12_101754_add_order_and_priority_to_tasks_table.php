@@ -1,9 +1,9 @@
 <?php
 
+use App\Models\Task;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use App\Models\Task;
 
 return new class extends Migration
 {
@@ -24,7 +24,7 @@ return new class extends Migration
             ->each(function ($tasks) {
                 foreach ($tasks as $index => $task) {
                     $task->update([
-                        'order' => $index + 1
+                        'order' => $index + 1,
                     ]);
                 }
             });

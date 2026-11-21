@@ -2,13 +2,11 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
 class StoreTaskRequest extends FormRequest
 {
-    
     public function authorize(): bool
     {
         return Auth::check();
@@ -20,7 +18,7 @@ class StoreTaskRequest extends FormRequest
             'description' => 'required|string|max:255',
             'date' => 'required|date',
             'is_finished' => 'boolean',
-            'priority' => 'int'
+            'priority' => 'int',
         ];
     }
 }

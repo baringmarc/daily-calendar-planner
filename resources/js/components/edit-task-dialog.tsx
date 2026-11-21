@@ -8,10 +8,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Input } from './ui/input';
+import { PRIORITY_MAP } from '@/constants/priority';
 import { cn } from '@/lib/utils';
 import type { Task } from '@/types';
-import { PRIORITY_MAP } from '@/constants/priority';
+import { Input } from './ui/input';
 
 export function EditTaskDialog({
     open = false,
@@ -38,7 +38,9 @@ export function EditTaskDialog({
                     value={currentEditTask?.description}
                     onChange={(e) =>
                         setCurrentEditTask((prev) => {
-                            if (!prev) return prev;
+                            if (!prev) {
+                                return prev;
+                            }
 
                             return {
                                 ...prev,
@@ -57,7 +59,9 @@ export function EditTaskDialog({
                             type="button"
                             onClick={() =>
                                 setCurrentEditTask((prev) => {
-                                    if (!prev) return prev;
+                                    if (!prev) {
+                                        return prev;
+                                    }
 
                                     return {
                                         ...prev,

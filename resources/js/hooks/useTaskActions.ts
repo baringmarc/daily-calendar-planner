@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { useState } from 'react';
 import type { DayData, Task } from '@/types';
 
 export function useTaskActions({
@@ -17,7 +17,9 @@ export function useTaskActions({
     const [currentEditTask, setCurrentEditTask] = useState<Task | null>(null);
 
     const updateNotes = async (note: string) => {
-        if (note === dayData?.calendar_day?.note) return;
+        if (note === dayData?.calendar_day?.note) {
+            return;
+        }
 
         const dateKey = format(date, 'yyyy-MM-dd');
 
@@ -28,7 +30,9 @@ export function useTaskActions({
                     note,
                 });
 
-                if (res.status !== 201) throw new Error();
+                if (res.status !== 201) {
+                    throw new Error();
+                }
 
                 updateData((prev) => ({
                     ...prev,
@@ -40,7 +44,9 @@ export function useTaskActions({
                     { note },
                 );
 
-                if (res.status !== 200) throw new Error();
+                if (res.status !== 200) {
+                    throw new Error();
+                }
 
                 updateData((prev) => ({
                     ...prev,
@@ -57,7 +63,9 @@ export function useTaskActions({
 
     // ADD task
     const handleAddTask = async (task: string, priority: number) => {
-        if (!task.trim()) return;
+        if (!task.trim()) {
+            return;
+        }
 
         const dateKey = format(date, 'yyyy-MM-dd');
 
@@ -69,7 +77,9 @@ export function useTaskActions({
                 priority: priority,
             });
 
-            if (res.status !== 201) throw new Error();
+            if (res.status !== 201) {
+                throw new Error();
+            }
 
             const newTaskData = {
                 ...res.data,
@@ -93,7 +103,10 @@ export function useTaskActions({
     const handleDeleteTask = async (id: string) => {
         try {
             const res = await axios.delete(`/tasks/${id}`);
-            if (res.status !== 200) throw new Error();
+
+            if (res.status !== 200) {
+                throw new Error();
+            }
 
             updateData((prev) => ({
                 ...prev,
@@ -108,7 +121,10 @@ export function useTaskActions({
     const toggleFinishTask = async (id: string, is_finished: boolean) => {
         try {
             const res = await axios.put(`/tasks/${id}`, { is_finished });
-            if (res.status !== 200) throw new Error();
+
+            if (res.status !== 200) {
+                throw new Error();
+            }
 
             updateData((prev) => ({
                 ...prev,
@@ -129,12 +145,16 @@ export function useTaskActions({
 
     // EDIT task
     const handleEditTask = async (task: Task | null) => {
-        if (!task) return;
+        if (!task) {
+            return;
+        }
 
         try {
             const res = await axios.put(`/tasks/${task.id}`, task);
 
-            if (res.status !== 200) throw new Error();
+            if (res.status !== 200) {
+                throw new Error();
+            }
 
             updateData((prev) => ({
                 ...prev,

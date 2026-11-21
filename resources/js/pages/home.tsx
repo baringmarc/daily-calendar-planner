@@ -38,6 +38,7 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [calendar, setCalendar] = useState<CalendarData>({});
     const [isLoading, setIsLoading] = useState(false);
+    const [unfinishedTasks, setUnfinishedTasks] = useState<UnfinishedTasks>({});
     const [openUnfinishedTasksDialog, setOpenUnfinishedTasksDialog] =
         useState(false);
 
@@ -95,26 +96,26 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
         }
     }, []);
 
-    const todaysCalendarDayId =
-        calendar[format(new Date(), 'yyyy-MM-dd')]?.calendar_day?.id;
+    // - unfinished tasks from days before today, across all months
+    const fetchUnfinishedTasks = useCallback(async () => {
+        try {
+            const res = await axios.get('/api/tasks/unfinished');
 
-    const unfinishedTasks = useMemo(() => {
-        const result: UnfinishedTasks = {};
+            setUnfinishedTasks(res.data.unfinishedTasks || {});
+        } catch (error) {
+            console.log('Error fetching unfinished tasks:', error);
+        }
+    }, []);
 
-        Object.entries(calendar).forEach(([date, day]) => {
-            const unfinished = day.tasks.filter(
-                (task) =>
-                    !task.is_finished &&
-                    task.calendar_day_id !== todaysCalendarDayId,
-            );
+    // Fetch again whenever the user is back on the month view, since tasks
+    // may have been finished in the day view.
+    const isMonthView = selectedDay === null;
 
-            if (unfinished.length > 0) {
-                result[date] = unfinished;
-            }
-        });
-
-        return result;
-    }, [calendar, todaysCalendarDayId]);
+    useEffect(() => {
+        if (isMonthView) {
+            fetchUnfinishedTasks();
+        }
+    }, [isMonthView, fetchUnfinishedTasks]);
 
     // - check if there are unfinished tasks from previous days
     useEffect(() => {
@@ -126,10 +127,13 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     const carryOverTasks = async (carryOverTasks: UnfinishedTasks) => {
         try {
             await axios.post('/api/tasks/carry-over', {
-                tasks: carryOverTasks,
+                task_ids: Object.values(carryOverTasks)
+                    .flat()
+                    .map((task) => task.id),
             });
 
             setOpenUnfinishedTasksDialog(false);
+            setUnfinishedTasks({});
 
             // Refetch calendar data to reflect changes
             fetchCalendar(currentDate);

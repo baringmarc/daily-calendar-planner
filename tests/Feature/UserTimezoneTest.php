@@ -75,7 +75,7 @@ class UserTimezoneTest extends TestCase
         return $this->actingAs($this->user)
             ->withHeaders($headers)
             ->postJson(route('tasks.carry-over'), [
-                'tasks' => ['2026-11-10' => [['id' => $this->task->id]]],
+                'task_ids' => [$this->task->id],
             ]);
     }
 }

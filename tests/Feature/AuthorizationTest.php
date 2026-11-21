@@ -186,7 +186,7 @@ class AuthorizationTest extends TestCase
         $this->travelTo('2026-11-21 09:00:00');
 
         $response = $this->actingAs($this->owner)->postJson(route('tasks.carry-over'), [
-            'tasks' => ['2026-11-10' => [['id' => $this->ownerTask->id]]],
+            'task_ids' => [$this->ownerTask->id],
         ]);
 
         $response->assertOk();
@@ -198,7 +198,7 @@ class AuthorizationTest extends TestCase
     public function test_user_cannot_carry_over_another_users_tasks(): void
     {
         $response = $this->actingAs($this->intruder)->postJson(route('tasks.carry-over'), [
-            'tasks' => ['2026-11-10' => [['id' => $this->ownerTask->id]]],
+            'task_ids' => [$this->ownerTask->id],
         ]);
 
         $response->assertForbidden();
@@ -212,10 +212,7 @@ class AuthorizationTest extends TestCase
         $intruderTask = Task::factory()->for($intruderDay)->create();
 
         $response = $this->actingAs($this->intruder)->postJson(route('tasks.carry-over'), [
-            'tasks' => [
-                '2026-11-09' => [['id' => $intruderTask->id]],
-                '2026-11-10' => [['id' => $this->ownerTask->id]],
-            ],
+            'task_ids' => [$intruderTask->id, $this->ownerTask->id],
         ]);
 
         $response->assertForbidden();
@@ -231,7 +228,7 @@ class AuthorizationTest extends TestCase
         $intruderTask = Task::factory()->for($intruderDay)->create();
 
         $response = $this->actingAs($this->intruder)->postJson(route('tasks.carry-over'), [
-            'tasks' => ['2026-11-09' => [['id' => $intruderTask->id]]],
+            'task_ids' => [$intruderTask->id],
             'calendar_day_id' => $this->ownerDay->id,
         ]);
 

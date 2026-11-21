@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CarryOverTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
 use App\Services\TaskService;
 use App\Support\UserClock;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class TaskController extends Controller
@@ -82,30 +84,46 @@ class TaskController extends Controller
         return response()->json(['message' => 'Task deleted successfully'], 200);
     }
 
-    // - carry over tasks from previous days
-    public function carryOverTasks(UpdateTaskRequest $request)
+    /**
+     * Unfinished tasks from days before today, grouped by date (oldest first).
+     */
+    public function unfinished(Request $request)
     {
         $taskService = new TaskService;
 
-        if (! $request->has('tasks') || ! is_array($request->input('tasks'))) {
-            return response()->json(['message' => 'Invalid tasks data'], 400);
-        }
-
-        $taskIds = [];
-
-        foreach ($request->input('tasks') as $day) {
-            foreach ($day as $task) {
-                $taskIds[] = $task['id'];
-            }
-        }
-
-        $updatedTasks = $taskService->carryOverTasks(
+        $tasks = $taskService->unfinishedTasksBefore(
             $request->user(),
-            $taskIds,
             UserClock::today($request)->toDateString(),
         );
 
-        return response()->json($updatedTasks, 200);
+        $grouped = $tasks->groupBy('date')->map(fn ($tasks) => $tasks->map(fn (Task $task) => [
+            'id' => $task->id,
+            'description' => $task->description,
+            'is_finished' => $task->is_finished,
+            'calendar_day_id' => $task->calendar_day_id,
+            'priority' => $task->priority,
+            'order' => $task->order,
+        ])->values());
+
+        return response()->json([
+            'unfinishedTasks' => (object) $grouped->all(),
+        ]);
+    }
+
+    /**
+     * Move unfinished tasks from earlier days to today.
+     */
+    public function carryOverTasks(CarryOverTasksRequest $request)
+    {
+        $taskService = new TaskService;
+
+        $movedTasks = $taskService->carryOverTasks(
+            $request->user(),
+            $request->validated('task_ids'),
+            UserClock::today($request)->toDateString(),
+        );
+
+        return response()->json($movedTasks, 200);
     }
 
     public function reorder(UpdateTaskRequest $request)

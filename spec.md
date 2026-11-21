@@ -84,9 +84,9 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 - The week starts on **Monday** ([decision D2](#9-decisions-and-open-questions)). The weekday headers run Mon → Sun, and the backend's date range uses the same week start as the frontend grid. Both read it from `config/calendar.php`, which reaches the frontend as the `weekStartsOn` prop. A user-selectable week start is planned, defaulting to Monday. ⬜ [FEAT-01](tasks.md)
 
 ### 3.5 Carry-over
-- An **unfinished past task** is a task with `is_finished = false` on a date strictly **before today**. Tasks on today or future dates are never offered for carry-over. ⚠️ [BUG-05](tasks.md)
+- An **unfinished past task** is a task with `is_finished = false` on a date strictly **before today**. Tasks on today or future dates are never offered for carry-over.
 - When the user opens the calendar and unfinished past tasks exist, the app offers to move them to today.
-- The candidate list is computed from **all** past days, not only the month on screen. ⚠️ [BUG-05](tasks.md)
+- The candidate list is computed from **all** past days, not only the month on screen.
 - The user can accept, or dismiss with "Not now". Dismissing suppresses the prompt for the rest of that day. ⬜ [UX-08](tasks.md)
 - Accepting moves the selected tasks to today's calendar day, creating it if needed. They are appended after today's existing tasks.
 - Carry-over **moves** tasks: the task's day changes to today, and no record of its original date is kept ([decision D1](#9-decisions-and-open-questions)).
@@ -142,7 +142,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 
 | ID | Requirement | Status |
 |---|---|---|
-| FR-C1 | Prompt to carry over unfinished past tasks, following the rules in [3.5](#35-carry-over). | ⚠️ [BUG-05](tasks.md) |
+| FR-C1 | Prompt to carry over unfinished past tasks, following the rules in [3.5](#35-carry-over). | ✅ |
 | FR-C2 | The user can choose which tasks to carry over. | ⬜ [UX-08](tasks.md) |
 | FR-C3 | Dismissing the prompt suppresses it until the next day. | ⬜ [UX-08](tasks.md) |
 
@@ -235,12 +235,11 @@ Body: `{ note: string|null (≤500) }`. **200** with the day.
 #### `PUT /api/tasks/reorder`
 Body: `{ tasks: [{ id }, ...] }`, all from the same calendar day and in the new order. Rewrites `order` as `1..n`. **200**.
 
+#### `GET /api/tasks/unfinished`
+Returns `{ unfinishedTasks: { [date]: Task[] } }`: the user's unfinished tasks on days strictly before today (in the user's time zone), from any month. Dates are oldest first, and tasks within a date follow `order`. An empty result is `{}`.
+
 #### `POST /api/tasks/carry-over`
-Current body: `{ tasks: { [date]: Task[] } }`. The tasks move to the user's day for today, which the server finds or creates. **403** if any task isn't the user's.
-
-Target contract ([BUG-05](tasks.md), [DEBT-03](tasks.md)): `{ task_ids: number[] }`. The server resolves "today" itself, checks that every task is owned by the user, unfinished and dated before today, and appends the tasks to today. **200** with the moved tasks.
-
-Planned: `GET /api/tasks/unfinished` returns unfinished past tasks across all dates, so the prompt doesn't depend on the visible month.
+Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itself and checks that every task is owned by the user (**403** otherwise), unfinished and dated before today (**422** otherwise). The tasks are appended after today's existing tasks, oldest day first, and today's day is created if needed. **200** with the moved tasks.
 
 ### 6.3 Unused routes
 `GET /tasks`, `GET /calendar-days` and `DELETE /calendar-days/{id}` are registered but their methods are empty. Either remove them or implement them ([DEBT-02](tasks.md)).
@@ -250,7 +249,7 @@ Planned: `GET /api/tasks/unfinished` returns unfinished past tasks across all da
 ## 7. Frontend architecture
 
 - **Single page.** `HomeController@index` renders the `home` Inertia page with a single `weekStartsOn` prop. After that, all data goes through the JSON API above.
-- [resources/js/pages/home.tsx](resources/js/pages/home.tsx) owns `calendar: CalendarData`, fetches again when the month changes, works out the carry-over candidates, and switches between the month grid and the day view.
+- [resources/js/pages/home.tsx](resources/js/pages/home.tsx) owns `calendar: CalendarData`, fetches again when the month changes, fetches the carry-over candidates from `GET /api/tasks/unfinished` whenever the month view is shown, and switches between the month grid and the day view.
 - [resources/js/components/day-panel-content.tsx](resources/js/components/day-panel-content.tsx) renders a day: tasks (dnd-kit sortable), add/edit dialogs and the note.
 - [resources/js/hooks/useTaskActions.ts](resources/js/hooks/useTaskActions.ts) makes the per-day API calls and patches local state through `updateData(prev => next)`. It does not fetch again.
 - Priority labels and styles live in [resources/js/constants/priority.ts](resources/js/constants/priority.ts).

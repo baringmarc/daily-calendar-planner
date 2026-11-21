@@ -15,6 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->except(['create', 'edit', 'show']); // Keep only index, store, update, destroy
 
     // Task routes
+    Route::get('/api/tasks/unfinished', [TaskController::class, 'unfinished'])->name('tasks.unfinished');
     Route::post('/api/tasks/carry-over', [TaskController::class, 'carryOverTasks'])->name('tasks.carry-over');
     Route::put('/api/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
     Route::resource('tasks', TaskController::class)

@@ -7,7 +7,9 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TaskService
 {
@@ -39,24 +41,56 @@ class TaskService
     }
 
     /**
-     * Move the given tasks to the user's calendar day for today (Y-m-d).
+     * The user's unfinished tasks on days strictly before $today (Y-m-d),
+     * oldest day first, each with its day's `date`.
+     *
+     * @return Collection<int, Task>
+     */
+    public function unfinishedTasksBefore(User $user, string $today): Collection
+    {
+        return $this->unfinishedPastTasksQuery($user, $today)->get();
+    }
+
+    /**
+     * Move the given tasks to the user's calendar day for today (Y-m-d),
+     * appended after the tasks already there.
      *
      * The target day is always resolved on the server. The whole request is
-     * rejected if any of the ids doesn't belong to the user.
+     * rejected with a 403 if any id isn't the user's, and with a 422 if any
+     * task is finished or isn't from a day before today.
+     *
+     * @return Collection<int, Task> the moved tasks
      */
-    public function carryOverTasks(User $user, array $taskIds, string $today)
+    public function carryOverTasks(User $user, array $taskIds, string $today): Collection
     {
         return DB::transaction(function () use ($user, $taskIds, $today) {
             $this->ensureUserOwnsTasks($user, $taskIds);
+
+            $tasks = $this->unfinishedPastTasksQuery($user, $today)
+                ->whereIn('tasks.id', $taskIds)
+                ->get();
+
+            if ($tasks->count() !== count(array_unique($taskIds))) {
+                throw ValidationException::withMessages([
+                    'task_ids' => 'Only unfinished tasks from days before today can be carried over.',
+                ]);
+            }
 
             $targetDay = CalendarDay::firstOrCreate([
                 'user_id' => $user->id,
                 'date' => $today,
             ]);
 
-            return $this->tasksOwnedBy($user)
-                ->whereIn('id', $taskIds)
-                ->update(['calendar_day_id' => $targetDay->id]);
+            $order = Task::where('calendar_day_id', $targetDay->id)->max('order') ?? 0;
+
+            foreach ($tasks as $task) {
+                $task->update([
+                    'calendar_day_id' => $targetDay->id,
+                    'order' => ++$order,
+                ]);
+            }
+
+            return $tasks->each(fn (Task $task) => $task->offsetUnset('date'));
         });
     }
 
@@ -96,6 +130,18 @@ class TaskService
         if ($ownedCount !== count($taskIds)) {
             throw new AuthorizationException('This action is unauthorized.');
         }
+    }
+
+    private function unfinishedPastTasksQuery(User $user, string $today): Builder
+    {
+        return Task::query()
+            ->select('tasks.*', 'calendar_days.date')
+            ->join('calendar_days', 'calendar_days.id', '=', 'tasks.calendar_day_id')
+            ->where('calendar_days.user_id', $user->id)
+            ->where('tasks.is_finished', false)
+            ->where('calendar_days.date', '<', $today)
+            ->orderBy('calendar_days.date')
+            ->orderBy('tasks.order');
     }
 
     private function tasksOwnedBy(User $user): Builder

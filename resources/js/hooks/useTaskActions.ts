@@ -78,8 +78,14 @@ export function useTaskActions({
             if (task) {
                 replaceTask(saved);
             } else {
+                // The server creates the day row with its first task, so
+                // remember its id: a note saved next must update that row,
+                // not try to create a second one (a 422).
                 updateData((prev) => ({
-                    ...prev,
+                    calendar_day: {
+                        ...prev.calendar_day,
+                        id: prev.calendar_day.id ?? saved.calendar_day_id,
+                    },
                     tasks: [...prev.tasks, saved],
                 }));
             }

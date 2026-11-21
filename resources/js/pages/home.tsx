@@ -12,6 +12,7 @@ import {
     endOfWeek,
     setMonth,
     setYear,
+    parseISO,
 } from 'date-fns';
 import type { Day } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +34,16 @@ import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
 import type { DayData, CalendarData, Task, UnfinishedTasks } from '@/types';
 
+// Shared by every day without saved data, so it keeps the same identity
+// across renders.
+const EMPTY_DAY_DATA: DayData = {
+    calendar_day: {
+        id: null,
+        note: '',
+    },
+    tasks: [],
+};
+
 export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
@@ -42,23 +53,23 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     const [openUnfinishedTasksDialog, setOpenUnfinishedTasksDialog] =
         useState(false);
 
-    const emptyDayData: DayData = {
-        calendar_day: {
-            id: null,
-            note: '',
-        },
-        tasks: [],
-    };
-
     // --- Calendar Math ---
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart, { weekStartsOn });
-    const endDate = endOfWeek(monthEnd, { weekStartsOn });
+    // Keyed on the month rather than on Date objects, which are new on
+    // every render and would defeat the memo.
+    const monthKey = format(currentDate, 'yyyy-MM');
+    const monthStart = useMemo(
+        () => startOfMonth(parseISO(`${monthKey}-01`)),
+        [monthKey],
+    );
 
-    const calendarDays = useMemo(() => {
-        return eachDayOfInterval({ start: startDate, end: endDate });
-    }, [startDate, endDate]);
+    const calendarDays = useMemo(
+        () =>
+            eachDayOfInterval({
+                start: startOfWeek(monthStart, { weekStartsOn }),
+                end: endOfWeek(endOfMonth(monthStart), { weekStartsOn }),
+            }),
+        [monthStart, weekStartsOn],
+    );
 
     const weekCount = calendarDays.length / 7;
     const weekDays = calendarDays.slice(0, 7).map((day) => format(day, 'EEE'));
@@ -147,7 +158,7 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     const updateDayData = (date: Date, updater: (prev: DayData) => DayData) => {
         const key = format(date, 'yyyy-MM-dd');
         setCalendar((prev) => {
-            const currentData = prev[key] ?? emptyDayData;
+            const currentData = prev[key] ?? EMPTY_DAY_DATA;
 
             return { ...prev, [key]: updater(currentData) };
         });
@@ -159,7 +170,7 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     const currentDayData =
         selectedDayKey && calendar[selectedDayKey]
             ? calendar[selectedDayKey]
-            : emptyDayData;
+            : EMPTY_DAY_DATA;
 
     return (
         <AppLayout>

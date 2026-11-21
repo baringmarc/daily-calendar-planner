@@ -1,4 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react';
+import axios from 'axios';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ThemeProvider } from 'next-themes';
 import { StrictMode } from 'react';
@@ -6,6 +7,10 @@ import { createRoot } from 'react-dom/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import '../css/app.css';
 import { initializeTheme } from '@/hooks/use-appearance';
+
+// Lets the server work out "today" in the user's time zone (App\Support\UserClock).
+axios.defaults.headers.common['X-Timezone'] =
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

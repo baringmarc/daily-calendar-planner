@@ -264,7 +264,7 @@ Planned: `GET /api/tasks/unfinished` returns unfinished past tasks across all da
 |---|---|
 | Security | Every resource is scoped to its owner, enforced by policies and tested ([SEC-01](tasks.md)). Standard Laravel CSRF and session protections apply. Production passwords: min 12 chars, mixed case, numbers, symbols, not compromised (already configured). |
 | Validation | All input is validated in Form Requests, and validation limits match the column sizes. |
-| Time | Server, client and stored dates agree on "today" and on week boundaries. No hardcoded time zones. |
+| Time | Server, client and stored dates agree on "today" and on week boundaries. No hardcoded time zones. Until FEAT-01 stores a zone per user, the browser sends its zone in the `X-Timezone` header and the server falls back to the app time zone. |
 | Responsiveness | Usable from 360px phone width up to desktop. No hover-only actions. |
 | Accessibility | Icon-only buttons have accessible names. The calendar and task list work with the keyboard. Colour isn't the only way priority is shown (a text label is also shown). |
 | Feedback | Every mutation shows success or failure to the user. Optimistic updates roll back on failure. |

@@ -42,8 +42,10 @@ Work is tracked by the stable task IDs in [tasks.md](tasks.md) (`CI-01`, `SEC-01
 **The app is one page and is not Inertia-driven.** `GET /` (`HomeController@index`, route `home`) renders `welcome` for guests and the `home` Inertia page for signed-in users, whose only prop is `weekStartsOn` (from `config/calendar.php`, Monday by default). Everything after that is client-side JSON over axios:
 - `GET /api/calendar?month=YYYY-MM` (`HomeController@calendar`) returns `calendarData` keyed by `Y-m-d` date, covering the full weeks around the month (starting on `config('calendar.week_starts_on')`, the same value the grid gets as `weekStartsOn`, so pass it to every date-fns week call), with shape `{ calendar_day: {id, note}, tasks: [...] }`. That shape is the `CalendarData`/`DayData` type in `resources/js/types/calendar.ts`. If you change the response, change the type too.
 - `/tasks` and `/calendar-days` are resource routes (store/update/destroy) that return JSON, not Inertia responses.
-- `POST /api/tasks/carry-over` takes `{ tasks: { [date]: Task[] } }` and moves the tasks to the user's day for today, which the server finds or creates using the hardcoded `Asia/Manila` timezone.
+- `POST /api/tasks/carry-over` takes `{ tasks: { [date]: Task[] } }` and moves the tasks to the user's day for today, which the server finds or creates.
 - `PUT /api/tasks/reorder` takes the tasks in their new order and rewrites `order` as 1..n.
+
+**Time zone.** The browser sends its IANA zone in an `X-Timezone` header on every axios request (set in `resources/js/app.tsx`). Server code that needs "today" must use `App\Support\UserClock::today($request)`, which falls back to `config('app.timezone')` (UTC) for a missing or invalid header. Never call `now()` for the user's date.
 
 Business logic lives in `app/Services/TaskService.php`, and controllers create it with `new TaskService()`.
 

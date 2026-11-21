@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\UserClock;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -36,7 +37,7 @@ class HomeController extends Controller
 
     public function calendar(Request $request)
     {
-        $month = $request->input('month') ?? Carbon::now()->format('Y-m');
+        $month = $request->input('month') ?? UserClock::today($request)->format('Y-m');
         $baseDate = Carbon::parse($month);
 
         $startOfMonth = $baseDate->copy()->startOfMonth();

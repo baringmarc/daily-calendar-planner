@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\CalendarDay;
 use App\Models\Task;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -40,17 +39,16 @@ class TaskService
     }
 
     /**
-     * Move the given tasks to the user's calendar day for today.
+     * Move the given tasks to the user's calendar day for today (Y-m-d).
      *
      * The target day is always resolved on the server. The whole request is
      * rejected if any of the ids doesn't belong to the user.
      */
-    public function carryOverTasks(User $user, array $taskIds)
+    public function carryOverTasks(User $user, array $taskIds, string $today)
     {
-        return DB::transaction(function () use ($user, $taskIds) {
+        return DB::transaction(function () use ($user, $taskIds, $today) {
             $this->ensureUserOwnsTasks($user, $taskIds);
 
-            $today = Carbon::now('Asia/Manila')->format('Y-m-d');
             $targetDay = CalendarDay::firstOrCreate([
                 'user_id' => $user->id,
                 'date' => $today,

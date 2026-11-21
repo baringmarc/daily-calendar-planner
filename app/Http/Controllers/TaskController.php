@@ -6,6 +6,7 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
 use App\Services\TaskService;
+use App\Support\UserClock;
 use Illuminate\Support\Facades\Gate;
 
 class TaskController extends Controller
@@ -98,7 +99,11 @@ class TaskController extends Controller
             }
         }
 
-        $updatedTasks = $taskService->carryOverTasks($request->user(), $taskIds);
+        $updatedTasks = $taskService->carryOverTasks(
+            $request->user(),
+            $taskIds,
+            UserClock::today($request)->toDateString(),
+        );
 
         return response()->json($updatedTasks, 200);
     }

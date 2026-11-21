@@ -29,7 +29,9 @@ class HomeController extends Controller
             return redirect()->route('verification.notice');
         }
 
-        return Inertia::render('home');
+        return Inertia::render('home', [
+            'weekStartsOn' => self::weekStartsOn(),
+        ]);
     }
 
     public function calendar(Request $request)
@@ -40,8 +42,9 @@ class HomeController extends Controller
         $startOfMonth = $baseDate->copy()->startOfMonth();
         $endOfMonth = $baseDate->copy()->endOfMonth();
 
-        $startDate = $startOfMonth->copy()->startOfWeek();
-        $endDate = $endOfMonth->copy()->endOfWeek();
+        $weekStartsOn = self::weekStartsOn();
+        $startDate = $startOfMonth->copy()->startOfWeek($weekStartsOn)->toDateString();
+        $endDate = $endOfMonth->copy()->endOfWeek(($weekStartsOn + 6) % 7)->toDateString();
 
         $User = $request->user();
 
@@ -80,5 +83,13 @@ class HomeController extends Controller
         return response()->json([
             'calendarData' => $calendarData,
         ]);
+    }
+
+    /**
+     * The first day of the week, shared by the API's date range and the grid.
+     */
+    private static function weekStartsOn(): int
+    {
+        return (int) config('calendar.week_starts_on');
     }
 }

@@ -81,7 +81,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 ### 3.4 Week layout
 - The month grid shows complete weeks: from the start of the week containing the 1st to the end of the week containing the last day.
 - A month needs 4, 5 or 6 rows. The grid must fit all of them. ⚠️ [BUG-03](tasks.md)
-- The week starts on **Monday** ([decision D2](#9-decisions-and-open-questions)). The weekday headers run Mon → Sun, and the backend's date range uses the same week start as the frontend grid. ⚠️ The UI currently starts on Sunday while the API starts on Monday ([BUG-02](tasks.md)). A user-selectable week start is planned, defaulting to Monday. ⬜ [FEAT-01](tasks.md)
+- The week starts on **Monday** ([decision D2](#9-decisions-and-open-questions)). The weekday headers run Mon → Sun, and the backend's date range uses the same week start as the frontend grid. Both read it from `config/calendar.php`, which reaches the frontend as the `weekStartsOn` prop. A user-selectable week start is planned, defaulting to Monday. ⬜ [FEAT-01](tasks.md)
 
 ### 3.5 Carry-over
 - An **unfinished past task** is a task with `is_finished = false` on a date strictly **before today**. Tasks on today or future dates are never offered for carry-over. ⚠️ [BUG-05](tasks.md)
@@ -114,7 +114,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | FR-M3 | Each cell with tasks shows a done/total count, a progress bar, and up to 3 task previews. If there are more, it shows "+N more". | ⚠️ "+N more" is missing ([UX-10](tasks.md)) |
 | FR-M4 | A cell indicates that the day has a note. | ⬜ [UX-10](tasks.md) |
 | FR-M5 | Clicking a cell opens that day's view. | ✅ |
-| FR-M6 | Data for every visible cell, including leading and trailing days from adjacent months, is loaded. | ⚠️ [BUG-02](tasks.md) |
+| FR-M6 | Data for every visible cell, including leading and trailing days from adjacent months, is loaded. | ✅ |
 | FR-M7 | The current month and selected day are reflected in the URL, so refresh, back/forward and deep links work. | ⬜ [UX-07](tasks.md) |
 
 ### 4.3 Day view
@@ -249,7 +249,7 @@ Planned: `GET /api/tasks/unfinished` returns unfinished past tasks across all da
 
 ## 7. Frontend architecture
 
-- **Single page.** `HomeController@index` renders the `home` Inertia page with no props. After that, all data goes through the JSON API above.
+- **Single page.** `HomeController@index` renders the `home` Inertia page with a single `weekStartsOn` prop. After that, all data goes through the JSON API above.
 - [resources/js/pages/home.tsx](resources/js/pages/home.tsx) owns `calendar: CalendarData`, fetches again when the month changes, works out the carry-over candidates, and switches between the month grid and the day view.
 - [resources/js/components/day-panel-content.tsx](resources/js/components/day-panel-content.tsx) renders a day: tasks (dnd-kit sortable), add/edit dialogs and the note.
 - [resources/js/hooks/useTaskActions.ts](resources/js/hooks/useTaskActions.ts) makes the per-day API calls and patches local state through `updateData(prev => next)`. It does not fetch again.

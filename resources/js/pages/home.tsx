@@ -13,6 +13,7 @@ import {
     setMonth,
     setYear,
 } from 'date-fns';
+import type { Day } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -32,7 +33,7 @@ import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
 import type { DayData, CalendarData, Task, UnfinishedTasks } from '@/types';
 
-export default function Home() {
+export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [calendar, setCalendar] = useState<CalendarData>({});
@@ -51,14 +52,14 @@ export default function Home() {
     // --- Calendar Math ---
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd);
+    const startDate = startOfWeek(monthStart, { weekStartsOn });
+    const endDate = endOfWeek(monthEnd, { weekStartsOn });
 
     const calendarDays = useMemo(() => {
         return eachDayOfInterval({ start: startDate, end: endDate });
     }, [startDate, endDate]);
 
-    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weekDays = calendarDays.slice(0, 7).map((day) => format(day, 'EEE'));
     const years = Array.from(
         { length: 11 },
         (_, i) => currentDate.getFullYear() - 5 + i,

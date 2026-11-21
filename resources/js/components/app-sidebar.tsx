@@ -31,9 +31,7 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
 
-            <SidebarContent>
-                {/* <NavMain items={mainNavItems} /> */}
-            </SidebarContent>
+            <SidebarContent />
 
             <SidebarFooter>
                 <NavFooter items={footerNavItems} className="mt-auto" />

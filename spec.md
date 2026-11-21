@@ -241,9 +241,6 @@ Returns `{ unfinishedTasks: { [date]: Task[] } }`: the user's unfinished tasks o
 #### `POST /api/tasks/carry-over`
 Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itself and checks that every task is owned by the user (**403** otherwise), unfinished and dated before today (**422** otherwise). The tasks are appended after today's existing tasks, oldest day first, and today's day is created if needed. **200** with the moved tasks.
 
-### 6.3 Unused routes
-`GET /tasks`, `GET /calendar-days` and `DELETE /calendar-days/{id}` are registered but their methods are empty. Either remove them or implement them ([DEBT-02](tasks.md)).
-
 ---
 
 ## 7. Frontend architecture

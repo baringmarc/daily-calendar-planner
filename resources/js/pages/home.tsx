@@ -68,8 +68,6 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
     );
     const months = Array.from({ length: 12 }, (_, i) => i);
 
-    const MAX_TASK_DESC_LENGTH = 23;
-
     // - handle date navigation
     const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -386,12 +384,9 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
                                                                             <Square className="h-3 w-3 shrink-0 text-muted-foreground" />
                                                                         )}
                                                                         <span className="truncate opacity-80">
-                                                                            {task
-                                                                                .description
-                                                                                .length >
-                                                                            MAX_TASK_DESC_LENGTH
-                                                                                ? `${task.description.slice(0, MAX_TASK_DESC_LENGTH)}...`
-                                                                                : task.description}
+                                                                            {
+                                                                                task.description
+                                                                            }
                                                                         </span>
                                                                     </div>
                                                                 ),

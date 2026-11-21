@@ -12,14 +12,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/calendar', [HomeController::class, 'calendar'])->name('api.calendar');
 
     Route::resource('calendar-days', CalendarDayController::class)
-        ->except(['create', 'edit', 'show']); // Keep only index, store, update, destroy
+        ->only(['store', 'update']);
 
     // Task routes
     Route::get('/api/tasks/unfinished', [TaskController::class, 'unfinished'])->name('tasks.unfinished');
     Route::post('/api/tasks/carry-over', [TaskController::class, 'carryOverTasks'])->name('tasks.carry-over');
     Route::put('/api/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
     Route::resource('tasks', TaskController::class)
-        ->except(['create', 'edit', 'show']); // Keep only index, store, update, destroy
-
+        ->only(['store', 'update', 'destroy']);
 });
+
 require __DIR__.'/settings.php';

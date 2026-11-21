@@ -24,4 +24,37 @@ class CalendarDayFactory extends Factory
             'note' => null,
         ];
     }
+
+    /**
+     * A day on the given date (Y-m-d).
+     */
+    public function onDate(string $date): static
+    {
+        return $this->state(fn () => ['date' => $date]);
+    }
+
+    /**
+     * A day strictly before today, in the app time zone.
+     */
+    public function past(): static
+    {
+        return $this->state(fn () => [
+            'date' => fake()->unique()->dateTimeBetween('-1 month', '-1 day')->format('Y-m-d'),
+        ]);
+    }
+
+    /**
+     * A day strictly after today, in the app time zone.
+     */
+    public function future(): static
+    {
+        return $this->state(fn () => [
+            'date' => fake()->unique()->dateTimeBetween('+1 day', '+1 month')->format('Y-m-d'),
+        ]);
+    }
+
+    public function withNote(?string $note = null): static
+    {
+        return $this->state(fn () => ['note' => $note ?? fake()->paragraph()]);
+    }
 }

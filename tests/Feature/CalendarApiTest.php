@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CalendarDay;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -41,5 +42,58 @@ class CalendarApiTest extends TestCase
             ['2026-06-29', '2026-07-15', '2026-08-02'],
             collect($response->json('calendarData'))->keys()->sort()->values()->all(),
         );
+    }
+
+    public function test_calendar_returns_each_day_with_its_note_and_ordered_tasks(): void
+    {
+        $user = User::factory()->create();
+        $day = CalendarDay::factory()->onDate('2026-11-21')->withNote('Gym at 6')->create(['user_id' => $user->id]);
+        $second = Task::factory()->for($day)->finished()->priority(3)->create(['description' => 'Second', 'order' => 2]);
+        $first = Task::factory()->for($day)->priority(0)->create(['description' => 'First', 'order' => 1]);
+
+        $response = $this->actingAs($user)->getJson(route('api.calendar', ['month' => '2026-11']));
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'calendarData')
+            ->assertJsonCount(2, 'calendarData.2026-11-21.tasks')
+            ->assertJsonStructure(['calendarData' => ['2026-11-21' => [
+                'calendar_day' => ['id', 'note'],
+                'tasks' => [['id', 'description', 'is_finished', 'calendar_day_id', 'priority', 'order']],
+            ]]])
+            ->assertJson(['calendarData' => [
+                '2026-11-21' => [
+                    'calendar_day' => ['id' => $day->id, 'note' => 'Gym at 6'],
+                    'tasks' => [
+                        [
+                            'id' => $first->id,
+                            'description' => 'First',
+                            'is_finished' => false,
+                            'calendar_day_id' => $day->id,
+                            'priority' => 0,
+                            'order' => 1,
+                        ],
+                        [
+                            'id' => $second->id,
+                            'description' => 'Second',
+                            'is_finished' => true,
+                            'calendar_day_id' => $day->id,
+                            'priority' => 3,
+                            'order' => 2,
+                        ],
+                    ],
+                ],
+            ]]);
+    }
+
+    public function test_calendar_includes_days_with_a_note_and_no_tasks(): void
+    {
+        $user = User::factory()->create();
+        CalendarDay::factory()->onDate('2026-11-03')->withNote('Just a note')->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->getJson(route('api.calendar', ['month' => '2026-11']))
+            ->assertOk()
+            ->assertJsonPath('calendarData.2026-11-03.calendar_day.note', 'Just a note')
+            ->assertJsonPath('calendarData.2026-11-03.tasks', []);
     }
 }

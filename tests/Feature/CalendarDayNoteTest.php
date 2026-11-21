@@ -42,4 +42,51 @@ class CalendarDayNoteTest extends TestCase
 
         $this->assertSame('Keep me', $day->fresh()->note);
     }
+
+    public function test_saving_a_note_on_a_day_without_one_creates_the_day(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('calendar-days.store'), ['date' => '2026-11-21', 'note' => 'First note'])
+            ->assertCreated()
+            ->assertJsonPath('note', 'First note');
+
+        $this->assertSame('First note', $user->calendarDays()->where('date', '2026-11-21')->sole()->note);
+    }
+
+    public function test_a_user_cannot_create_the_same_day_twice(): void
+    {
+        $user = User::factory()->create();
+        CalendarDay::factory()->onDate('2026-11-21')->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->postJson(route('calendar-days.store'), ['date' => '2026-11-21', 'note' => 'Again'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('date');
+
+        $this->assertSame(1, $user->calendarDays()->count());
+    }
+
+    public function test_two_users_can_each_have_a_day_on_the_same_date(): void
+    {
+        CalendarDay::factory()->onDate('2026-11-21')->create();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('calendar-days.store'), ['date' => '2026-11-21', 'note' => 'Mine'])
+            ->assertCreated();
+    }
+
+    public function test_a_note_can_be_cleared(): void
+    {
+        $user = User::factory()->create();
+        $day = CalendarDay::factory()->withNote('Old')->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->putJson(route('calendar-days.update', $day), ['note' => ''])
+            ->assertOk();
+
+        $this->assertEmpty($day->fresh()->note);
+    }
 }

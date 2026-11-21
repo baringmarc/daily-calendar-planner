@@ -20,7 +20,7 @@ class CalendarDayFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'date' => fake()->unique()->dateTimeBetween('-1 month', '+1 month')->format('Y-m-d'),
+            'date' => self::uniqueDate(-30, 30),
             'note' => null,
         ];
     }
@@ -39,7 +39,7 @@ class CalendarDayFactory extends Factory
     public function past(): static
     {
         return $this->state(fn () => [
-            'date' => fake()->unique()->dateTimeBetween('-1 month', '-1 day')->format('Y-m-d'),
+            'date' => self::uniqueDate(-30, -1),
         ]);
     }
 
@@ -49,8 +49,19 @@ class CalendarDayFactory extends Factory
     public function future(): static
     {
         return $this->state(fn () => [
-            'date' => fake()->unique()->dateTimeBetween('+1 day', '+1 month')->format('Y-m-d'),
+            'date' => self::uniqueDate(1, 30),
         ]);
+    }
+
+    /**
+     * A date between $fromDays and $toDays days from today that no other day
+     * in this test has used. The offset is what's unique: making a random
+     * DateTime unique doesn't stop two of them falling on the same date,
+     * which breaks the (user_id, date) unique index.
+     */
+    private static function uniqueDate(int $fromDays, int $toDays): string
+    {
+        return now()->addDays(fake()->unique()->numberBetween($fromDays, $toDays))->toDateString();
     }
 
     public function withNote(?string $note = null): static

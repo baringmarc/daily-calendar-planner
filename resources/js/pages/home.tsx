@@ -59,6 +59,7 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
         return eachDayOfInterval({ start: startDate, end: endDate });
     }, [startDate, endDate]);
 
+    const weekCount = calendarDays.length / 7;
     const weekDays = calendarDays.slice(0, 7).map((day) => format(day, 'EEE'));
     const years = Array.from(
         { length: 11 },
@@ -276,7 +277,13 @@ export default function Home({ weekStartsOn }: { weekStartsOn: Day }) {
                                 </div>
 
                                 {/* Days Grid */}
-                                <div className="grid flex-1 grid-cols-7 grid-rows-5 overflow-y-auto">
+                                <div
+                                    className="grid flex-1 grid-cols-7 overflow-y-auto"
+                                    style={{
+                                        // 4, 5 or 6 weeks depending on the month
+                                        gridTemplateRows: `repeat(${weekCount}, minmax(0, 1fr))`,
+                                    }}
+                                >
                                     {calendarDays.map((day) => {
                                         const dayKey = format(
                                             day,

@@ -18,7 +18,6 @@ class Task extends Model
 
     protected $fillable = [
         'description',
-        'date',
         'is_finished',
         'calendar_day_id',
         'order',

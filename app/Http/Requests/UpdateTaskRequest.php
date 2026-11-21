@@ -25,11 +25,11 @@ class UpdateTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // A task's date and order change through their own endpoints
+            // (carry-over, reorder), not here.
             'description' => 'string|max:255',
-            'date' => 'date',
             'is_finished' => 'boolean',
             'priority' => ['integer', Rule::in([0, 1, 2, 3])],
-            'order' => 'int',
         ];
     }
 }

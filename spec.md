@@ -131,7 +131,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | ID | Requirement | Status |
 |---|---|---|
 | FR-T1 | Add a task with a description and priority. Enter submits, Escape cancels, and Submit is disabled while the description is empty. | ⚠️ [UX-03](tasks.md) |
-| FR-T2 | Edit a task's description and priority. | ⚠️ Fails for newly added tasks ([BUG-09](tasks.md)) |
+| FR-T2 | Edit a task's description and priority. | ✅ |
 | FR-T3 | Toggle a task finished or unfinished. | ✅ |
 | FR-T4 | Delete a task, with a confirmation or an undo. | ⚠️ Deletes without confirmation ([UX-02](tasks.md)) |
 | FR-T5 | Reorder tasks by drag and drop, and by keyboard. The new order shows immediately and is persisted. | ⚠️ Not optimistic ([UX-04](tasks.md)) |

@@ -86,15 +86,9 @@ export function useTaskActions({
                 throw new Error();
             }
 
-            const newTaskData = {
-                ...res.data,
-                description: newTask.trim(),
-                date: dateKey,
-            };
-
             updateData((prev) => ({
                 ...prev,
-                tasks: [...prev.tasks, newTaskData],
+                tasks: [...prev.tasks, res.data],
             }));
 
             setNewTask('');
@@ -155,7 +149,10 @@ export function useTaskActions({
         }
 
         try {
-            const res = await axios.put(`/tasks/${task.id}`, task);
+            const res = await axios.put(`/tasks/${task.id}`, {
+                description: task.description,
+                priority: task.priority,
+            });
 
             if (res.status !== 200) {
                 throw new Error();
@@ -163,9 +160,7 @@ export function useTaskActions({
 
             updateData((prev) => ({
                 ...prev,
-                tasks: prev.tasks.map((task) =>
-                    task.id === currentEditTask?.id ? res.data : task,
-                ),
+                tasks: prev.tasks.map((t) => (t.id === task.id ? res.data : t)),
             }));
 
             setCurrentEditTask(null);

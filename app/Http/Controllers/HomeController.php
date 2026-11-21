@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\CalendarDayResource;
 use App\Http\Resources\TaskResource;
 use App\Models\CalendarDay;
+use App\Services\RecurringTaskService;
 use App\Support\UserClock;
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
@@ -22,6 +23,8 @@ class HomeController extends Controller
      * The calendar's views. `month` is the default.
      */
     private const VIEWS = ['month', 'week', 'agenda'];
+
+    public function __construct(private RecurringTaskService $recurringTasks) {}
 
     /**
      * Show the welcome page to guests and the calendar to signed-in users.
@@ -75,9 +78,17 @@ class HomeController extends Controller
         $startDate = $startOfMonth->copy()->startOfWeek($weekStartsOn)->toDateString();
         $endDate = $endOfMonth->copy()->endOfWeek(($weekStartsOn + 6) % 7)->toDateString();
 
+        // Recurring tasks' occurrences are real rows, created on read up to
+        // the end of the range shown (spec decision D6).
+        $this->recurringTasks->generate(
+            $request->user(),
+            $endDate,
+            UserClock::today($request)->toDateString(),
+        );
+
         $days = $request->user()->calendarDays()
             ->whereBetween('date', [$startDate, $endDate])
-            ->with('tasks')
+            ->with('tasks.recurringTask')
             ->orderBy('date')
             ->get();
 

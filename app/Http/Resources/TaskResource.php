@@ -25,6 +25,8 @@ class TaskResource extends JsonResource
             'calendar_day_id' => $this->calendar_day_id,
             'priority' => $this->priority,
             'order' => $this->order,
+            // The repeat rule's schedule, or null for a one-off task (FEAT-09).
+            'recurrence' => $this->recurring_task_id === null ? null : $this->recurringTask?->schedule(),
         ];
     }
 }

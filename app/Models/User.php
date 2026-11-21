@@ -39,6 +39,11 @@ class User extends Authenticatable
         return $this->hasMany(CalendarDay::class);
     }
 
+    public function recurringTasks(): HasMany
+    {
+        return $this->hasMany(RecurringTask::class);
+    }
+
     public function tasks(): HasManyThrough
     {
         return $this->hasManyThrough(Task::class, CalendarDay::class);

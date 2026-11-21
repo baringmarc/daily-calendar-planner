@@ -90,6 +90,14 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 - The user picks which of the tasks to move (all are ticked to start), or dismisses with "Not now". Dismissing, or carrying tasks over, suppresses the prompt for the rest of that day in that browser.
 - Accepting moves the selected tasks to today's calendar day, creating it if needed. They are appended after today's existing tasks.
 - Carry-over **moves** tasks: the task's day changes to today, and no record of its original date is kept ([decision D1](#9-decisions-and-open-questions)).
+- Occurrences of a recurring task are never offered: a missed one comes back by itself ([decision D7](#9-decisions-and-open-questions)).
+
+### 3.6 Recurring tasks
+- A task can repeat: every day, every weekday (Mon–Fri), every week on chosen weekdays, every month on the same date, or every N days, weeks or months. A rule can have an end date.
+- The rule is stored once (`recurring_tasks`). Its occurrences are ordinary tasks linked to it, so each one can be finished, edited, reordered, moved or deleted on its own ([decision D6](#9-decisions-and-open-questions)).
+- A rule starts on the day of the task it was made from, so that day must be one of its occurrences. Weeks are counted from the week containing that day. A monthly rule skips months that don't have its date (the 31st).
+- Occurrences are created when the calendar is read, from today up to the end of the range read, at most a year ahead. Past days are never backfilled. Each rule remembers how far it has been generated, so a deleted or moved occurrence isn't created again.
+- Editing a repeating task applies to that task only, or to it and the following occurrences. Changing the rule restarts it from that task and replaces the unfinished occurrences after it. Choosing "Doesn't repeat" stops the series after that task: later unfinished occurrences are deleted, and the rest become one-off tasks. Occurrences on days before today are history and never change.
 
 ---
 
@@ -148,6 +156,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | FR-T6 | All task actions are usable on touch devices. They are not hover-only. | ✅ |
 | FR-T7 | Failed actions show a visible error (a toast, or the message next to the field for a 422) and leave the UI consistent with the server. | ✅ |
 | FR-T8 | Move a task to another date from its Move menu: Today, Tomorrow, or a picked date. It leaves its day at once and goes to the end of the new day's list. | ✅ |
+| FR-T9 | A task can repeat ([3.6](#36-recurring-tasks)). Repeating tasks show their rule ("Every weekday"), and editing one asks whether the change applies to the following occurrences too. | ✅ |
 
 ### 4.5 Carry-over
 
@@ -186,6 +195,21 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | `is_finished` | boolean, default false | |
 | `order` | integer, nullable | 1-based within a day |
 | `priority` | tinyint, default 1 | 0–3, see [3.2](#32-task) |
+| `recurring_task_id` | FK → recurring_tasks, nullable | null on delete. Set on a recurring task's occurrences |
+| timestamps | | |
+
+**`recurring_tasks`** (see [3.6](#36-recurring-tasks))
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `user_id` | FK → users | cascade on delete |
+| `description`, `priority` | | Copied to new occurrences |
+| `frequency` | string | `daily`, `weekly` or `monthly` (`App\Enums\RepeatFrequency`) |
+| `interval` | smallint, default 1 | Every N days, weeks or months (1–99) |
+| `weekdays` | json, nullable | Weekly rules: 0 = Sunday … 6 = Saturday |
+| `starts_on`, `ends_on` | date | `ends_on` is nullable |
+| `generated_through` | date, nullable | The last date occurrences were created up to |
 | timestamps | | |
 
 Ownership of a task is derived through its calendar day: `task.calendar_day.user_id`.
@@ -193,6 +217,7 @@ Ownership of a task is derived through its calendar day: `task.calendar_day.user
 ### 5.2 Relationships
 - `User` has many `CalendarDay`, and has many `Task` through them.
 - `CalendarDay` belongs to `User` and has many `Task`, always ordered by `order` ascending.
+- `User` has many `RecurringTask`, and a `RecurringTask` has many `Task` occurrences. A `Task` may belong to a `RecurringTask`.
 - `Task` belongs to `CalendarDay`. `is_finished` is cast to a boolean, and `priority`, `order` and `calendar_day_id` to integers.
 
 Every endpoint returns tasks as `TaskResource` and days as `CalendarDayResource`, so ids are numbers and `is_finished` is a boolean.
@@ -211,7 +236,7 @@ All endpoints require an authenticated, verified session (`auth` + `verified` mi
 ### 6.2 Endpoints
 
 #### `GET /api/calendar?month=YYYY-MM`
-Returns every day with data in the visible grid for that month. `month` defaults to the current month and must match `YYYY-MM`.
+Returns every day with data in the visible grid for that month. `month` defaults to the current month and must match `YYYY-MM`. It first creates the user's missing recurring-task occurrences up to the end of the grid ([3.6](#36-recurring-tasks)).
 
 ```json
 {
@@ -220,16 +245,17 @@ Returns every day with data in the visible grid for that month. `month` defaults
       "calendar_day": { "id": 12, "note": "..." },
       "tasks": [
         { "id": 40, "description": "...", "is_finished": false,
-          "calendar_day_id": 12, "priority": 1, "order": 1 }
+          "calendar_day_id": 12, "priority": 1, "order": 1,
+          "recurrence": null }
       ]
     }
   }
 }
 ```
-The frontend type is `CalendarData` in [resources/js/types/calendar.ts](resources/js/types/calendar.ts). Change both together.
+`recurrence` is null for a one-off task, and otherwise `{ frequency, interval, weekdays, ends_on }`. The frontend type is `CalendarData` in [resources/js/types/calendar.ts](resources/js/types/calendar.ts). Change both together.
 
 #### `POST /tasks`
-Body: `{ description: string (1–255), date: YYYY-MM-DD, priority?: 0–3 }`. `priority` defaults to 1 (Medium). Finds or creates the calendar day for `date`, then appends the task. **201** with the task.
+Body: `{ description: string (1–255), date: YYYY-MM-DD, priority?: 0–3, recurrence?: { frequency, interval?: 1–99, weekdays?: (0–6)[], ends_on?: YYYY-MM-DD } | null }`. `priority` defaults to 1 (Medium). Finds or creates the calendar day for `date`, then appends the task. With a `recurrence`, the task is the first occurrence of a new rule starting on `date` (weekly rules need `weekdays`, which must include `date`'s weekday, and `ends_on` can't be before `date`; **422** otherwise). **201** with the task.
 
 #### `PUT /tasks/{task}`
 Body (all optional): `{ description, is_finished, priority }`. **200** with the updated task. `date` and `order` are not accepted here: moving a task uses its own endpoint (below) and ordering uses reorder.
@@ -246,11 +272,14 @@ Body: `{ note: string|null (≤500) }`. **200** with the day.
 #### `PUT /api/tasks/{task}/move`
 Body: `{ date: YYYY-MM-DD }`. Finds or creates the user's day for `date` and appends the task after that day's tasks. Moving a task to the day it is already on changes nothing. **200** with the task. **403** for another user's task, **422** for an invalid date (`MoveTaskRequest`).
 
+#### `PUT /api/tasks/{task}/series`
+Body: `{ description, priority, recurrence: {...} | null }`, all required (`recurrence` may be null). Saves the task with its repeat rule ([3.6](#36-recurring-tasks)): for a task in a series it updates the rule and the unfinished occurrences after the task, replaces them if the schedule changed, or, with a null `recurrence`, stops the series after the task. For a one-off task a `recurrence` makes it repeat. **200** with the task. **403** for another user's task, **422** for an invalid body or a rule that doesn't include the task's day (`UpdateTaskSeriesRequest`).
+
 #### `PUT /api/tasks/reorder`
 Body: `{ tasks: [{ id }, ...] }` (at least one, no duplicates), all from the same calendar day and in the new order. Rewrites `order` as `1..n` in one query. **200**. **403** if any task isn't the user's, **422** for an invalid body, an unknown id, or tasks from more than one day (`ReorderTasksRequest`).
 
 #### `GET /api/tasks/unfinished`
-Returns `{ unfinishedTasks: { [date]: Task[] } }`: the user's unfinished tasks on days strictly before today (in the user's time zone), from any month. Dates are oldest first, and tasks within a date follow `order`. An empty result is `{}`.
+Returns `{ unfinishedTasks: { [date]: Task[] } }`: the user's unfinished tasks on days strictly before today (in the user's time zone), from any month, leaving out recurring occurrences. Dates are oldest first, and tasks within a date follow `order`. An empty result is `{}`.
 
 #### `POST /api/tasks/carry-over`
 Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itself and checks that every task is owned by the user (**403** otherwise), unfinished and dated before today (**422** otherwise). The tasks are appended after today's existing tasks, oldest day first, and today's day is created if needed. **200** with the moved tasks.

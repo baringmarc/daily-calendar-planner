@@ -22,7 +22,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-import { format, isPast, isToday } from 'date-fns';
+import { isPast, isToday } from 'date-fns';
 import {
     AlignLeft,
     CalendarIcon,
@@ -218,7 +218,7 @@ export function DayPanelContent({
             open={taskDialog !== null}
             onOpenChange={(open) => !open && closeTaskDialog()}
             task={taskDialog?.task ?? null}
-            dateLabel={format(date, 'EEEE, MMMM d')}
+            date={date}
             onSubmit={submitTask}
             isSaving={isSavingTask}
             errors={taskErrors}

@@ -1,4 +1,14 @@
 import type { Priority } from '@/constants/priority';
+import type { RepeatFrequency } from '@/constants/recurrence';
+
+// A repeat rule's schedule (FEAT-09). Mirrors RecurringTask::schedule().
+// `weekdays` (0 = Sunday ... 6 = Saturday) is only set for weekly rules.
+export type Recurrence = {
+    frequency: RepeatFrequency;
+    interval: number;
+    weekdays: number[] | null;
+    ends_on: string | null;
+};
 
 // Mirrors App\Http\Resources\TaskResource. Change both together.
 export type Task = {
@@ -8,6 +18,8 @@ export type Task = {
     calendar_day_id: number;
     priority: Priority;
     order: number;
+    // Null for a one-off task.
+    recurrence: Recurrence | null;
 };
 
 // Mirrors App\Http\Resources\CalendarDayResource. `id` is null until the

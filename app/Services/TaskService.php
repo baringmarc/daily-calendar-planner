@@ -14,6 +14,13 @@ use Illuminate\Validation\ValidationException;
 
 class TaskService
 {
+    public function __construct(private RecurringTaskService $recurringTasks) {}
+
+    /**
+     * Add a task to the end of the user's day for `date`, creating the day
+     * if needed. With a `recurrence`, the task is the first occurrence of a
+     * new repeat rule (FEAT-09).
+     */
     public function create(array $data)
     {
         return DB::transaction(function () use ($data) {
@@ -30,14 +37,19 @@ class TaskService
             // -- create the Task
             $currentHighestOrder = Task::where('calendar_day_id', $day->id)->max('order') ?? 0;
 
-            return Task::create([
+            $task = Task::create([
                 'calendar_day_id' => $day->id,
-                'user_id' => $data['user_id'],
                 'description' => $data['description'],
                 'is_finished' => 0,
                 'priority' => $data['priority'] ?? Priority::DEFAULT,
                 'order' => $currentHighestOrder + 1,
             ]);
+
+            if (! empty($data['recurrence'])) {
+                $this->recurringTasks->start($day->user, $task, $data['recurrence']);
+            }
+
+            return $task;
         });
     }
 
@@ -180,6 +192,9 @@ class TaskService
             ->join('calendar_days', 'calendar_days.id', '=', 'tasks.calendar_day_id')
             ->where('calendar_days.user_id', $user->id)
             ->where('tasks.is_finished', false)
+            // A missed occurrence of a recurring task comes back by itself,
+            // so it's never carried over (spec decision D7).
+            ->whereNull('tasks.recurring_task_id')
             ->where('calendar_days.date', '<', $today)
             ->orderBy('calendar_days.date')
             ->orderBy('tasks.order');

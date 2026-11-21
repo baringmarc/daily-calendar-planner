@@ -3,7 +3,13 @@ import CalendarDayController from '@/actions/App/Http/Controllers/CalendarDayCon
 import HomeController from '@/actions/App/Http/Controllers/HomeController';
 import TaskController from '@/actions/App/Http/Controllers/TaskController';
 import type { Priority } from '@/constants/priority';
-import type { CalendarData, CalendarDay, Task, UnfinishedTasks } from '@/types';
+import type {
+    CalendarData,
+    CalendarDay,
+    Recurrence,
+    Task,
+    UnfinishedTasks,
+} from '@/types';
 
 /**
  * TanStack Query keys. Every month's calendar lives under `calendar`, so
@@ -34,10 +40,12 @@ export async function fetchUnfinishedTasks(): Promise<UnfinishedTasks> {
 
 // --- Mutations ---
 
+/** With a `recurrence`, the task is the first of a repeating series. */
 export async function createTask(task: {
     description: string;
     date: string;
     priority: Priority;
+    recurrence: Recurrence | null;
 }): Promise<Task> {
     const res = await axios.post(TaskController.store.url(), task);
 
@@ -77,6 +85,24 @@ export function deleteTaskOnUnload(id: number): void {
             ...(xsrf ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrf) } : {}),
         },
     });
+}
+
+/**
+ * Saves a task with its repeat rule (FEAT-09): changes the rule and the
+ * unfinished occurrences after the task, makes a one-off task repeat, or,
+ * with a null `recurrence`, stops the series after it.
+ */
+export async function updateTaskSeries(
+    id: number,
+    changes: {
+        description: string;
+        priority: Priority;
+        recurrence: Recurrence | null;
+    },
+): Promise<Task> {
+    const res = await axios.put(TaskController.updateSeries.url(id), changes);
+
+    return res.data;
 }
 
 /** `date` is yyyy-MM-dd. The task goes to the end of that day's list. */

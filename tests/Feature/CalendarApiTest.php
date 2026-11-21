@@ -67,6 +67,7 @@ class CalendarApiTest extends TestCase
                             'calendar_day_id' => $day->id,
                             'priority' => 0,
                             'order' => 1,
+                            'recurrence' => null,
                         ],
                         [
                             'id' => $second->id,
@@ -75,6 +76,7 @@ class CalendarApiTest extends TestCase
                             'calendar_day_id' => $day->id,
                             'priority' => 3,
                             'order' => 2,
+                            'recurrence' => null,
                         ],
                     ],
                 ],

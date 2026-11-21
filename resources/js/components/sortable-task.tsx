@@ -9,6 +9,7 @@ import {
     Trash2,
     SquarePen,
     Logs,
+    Repeat,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -19,6 +20,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PRIORITY_MAP, PRIORITY_STYLES } from '@/constants/priority';
+import { describeRecurrence } from '@/constants/recurrence';
 import { cn } from '@/lib/utils';
 
 import type { Task } from '@/types';
@@ -110,6 +112,12 @@ export function SortableTask({
                 )}
             >
                 {task.description}
+                {task.recurrence && (
+                    <span className="mt-0.5 flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                        <Repeat aria-hidden="true" className="h-3 w-3" />
+                        {describeRecurrence(task.recurrence)}
+                    </span>
+                )}
             </span>
 
             <button

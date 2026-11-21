@@ -23,6 +23,7 @@ class Task extends Model
         'calendar_day_id',
         'order',
         'priority',
+        'recurring_task_id',
     ];
 
     /**
@@ -39,6 +40,7 @@ class Task extends Model
     {
         return [
             'calendar_day_id' => 'integer',
+            'recurring_task_id' => 'integer',
             'is_finished' => 'boolean',
             'priority' => Priority::class,
             'order' => 'integer',
@@ -48,5 +50,13 @@ class Task extends Model
     public function calendarDay(): BelongsTo
     {
         return $this->belongsTo(CalendarDay::class);
+    }
+
+    /**
+     * The repeat rule this task is an occurrence of, if any (FEAT-09).
+     */
+    public function recurringTask(): BelongsTo
+    {
+        return $this->belongsTo(RecurringTask::class);
     }
 }

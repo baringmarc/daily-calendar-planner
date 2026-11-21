@@ -19,6 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/api/tasks/carry-over', [TaskController::class, 'carryOverTasks'])->name('tasks.carry-over');
     Route::put('/api/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
     Route::put('/api/tasks/{task}/move', [TaskController::class, 'move'])->name('tasks.move');
+    Route::put('/api/tasks/{task}/series', [TaskController::class, 'updateSeries'])->name('tasks.series');
     Route::resource('tasks', TaskController::class)
         ->only(['store', 'update', 'destroy']);
 });

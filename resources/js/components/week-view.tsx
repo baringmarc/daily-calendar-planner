@@ -17,9 +17,10 @@ import {
     useSensors,
 } from '@dnd-kit/core';
 import { format, isToday, parseISO } from 'date-fns';
-import { CheckCircle2, Circle, GripVertical } from 'lucide-react';
+import { CheckCircle2, Circle, GripVertical, Repeat } from 'lucide-react';
 import { useState } from 'react';
 import { PRIORITY_MAP, PRIORITY_STYLES } from '@/constants/priority';
+import { describeRecurrence } from '@/constants/recurrence';
 import { dayKey } from '@/hooks/use-calendar';
 import { cn } from '@/lib/utils';
 import type { CalendarData, Task } from '@/types';
@@ -292,6 +293,13 @@ function WeekTask({
                 >
                     {task.description}
                 </span>
+                {task.recurrence && (
+                    <Repeat
+                        role="img"
+                        aria-label={describeRecurrence(task.recurrence)}
+                        className="mt-1 mr-1 inline-block h-3 w-3 text-muted-foreground"
+                    />
+                )}
                 {!task.is_finished && (
                     <span
                         className={cn(

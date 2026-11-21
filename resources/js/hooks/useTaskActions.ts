@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { TaskFormValues } from '@/components/task-form-dialog';
+import { sameRecurrence } from '@/constants/recurrence';
 import {
     createCalendarDay,
     createTask,
@@ -11,6 +12,7 @@ import {
     queryKeys,
     updateCalendarDay,
     updateTask,
+    updateTaskSeries,
 } from '@/lib/calendar-api';
 import { validationErrors } from '@/lib/errors';
 import {
@@ -22,6 +24,14 @@ import type { DayData, Task } from '@/types';
 
 // How long a deleted task can be brought back before the delete is sent.
 const UNDO_DELETE_MS = 5000;
+
+// Whether saving the dialog reaches beyond this one task: adding a repeating
+// task, or changing, starting or stopping a series (FEAT-09).
+const reachesSeries = (task: Task | null, values: TaskFormValues) =>
+    task
+        ? values.scope === 'series' ||
+          !sameRecurrence(task.recurrence, values.recurrence)
+        : values.recurrence !== null;
 
 // Which task dialog is open: adding a new task, or editing one.
 type TaskDialog = { task: Task | null } | null;
@@ -77,11 +87,27 @@ export function useTaskActions({
         }: {
             task: Task | null;
             values: TaskFormValues;
-        }) =>
-            task
-                ? updateTask(task.id, values)
-                : createTask({ ...values, date: dateKey }),
-        onSuccess: (saved, { task }) => {
+        }) => {
+            const { description, priority, recurrence } = values;
+
+            if (!task) {
+                return createTask({
+                    description,
+                    priority,
+                    recurrence,
+                    date: dateKey,
+                });
+            }
+
+            return reachesSeries(task, values)
+                ? updateTaskSeries(task.id, {
+                      description,
+                      priority,
+                      recurrence,
+                  })
+                : updateTask(task.id, { description, priority });
+        },
+        onSuccess: (saved, { task, values }) => {
             if (task) {
                 replaceTask(saved);
             } else {
@@ -98,6 +124,14 @@ export function useTaskActions({
             }
 
             setTaskDialog(null);
+
+            // Other days' occurrences were created or changed on the server
+            // (they're created when the calendar is read), so fetch again.
+            if (reachesSeries(task, values)) {
+                return queryClient.invalidateQueries({
+                    queryKey: queryKeys.calendar,
+                });
+            }
         },
         meta: {
             errorMessage: "Couldn't save the task",

@@ -7,8 +7,10 @@ use App\Http\Requests\MoveTaskRequest;
 use App\Http\Requests\ReorderTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
+use App\Http\Requests\UpdateTaskSeriesRequest;
 use App\Http\Resources\TaskResource;
 use App\Models\Task;
+use App\Services\RecurringTaskService;
 use App\Services\TaskService;
 use App\Support\UserClock;
 use Illuminate\Http\Request;
@@ -63,6 +65,24 @@ class TaskController extends Controller
         Gate::authorize('update', $task);
 
         $task = $this->taskService->moveTask($request->user(), $task, $request->validated('date'));
+
+        return new TaskResource($task);
+    }
+
+    /**
+     * Save a task together with its repeat rule: change the rule and the
+     * occurrences after this task, start repeating, or stop (FEAT-09).
+     */
+    public function updateSeries(UpdateTaskSeriesRequest $request, Task $task, RecurringTaskService $recurringTasks)
+    {
+        Gate::authorize('update', $task);
+
+        $task = $recurringTasks->updateSeries(
+            $request->user(),
+            $task,
+            $request->validated(),
+            UserClock::today($request)->toDateString(),
+        );
 
         return new TaskResource($task);
     }

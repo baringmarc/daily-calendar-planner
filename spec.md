@@ -246,7 +246,8 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 ## 7. Frontend architecture
 
 - **Single page.** `HomeController@index` renders the `home` Inertia page with a single `weekStartsOn` prop. After that, all data goes through the JSON API above.
-- [resources/js/pages/home.tsx](resources/js/pages/home.tsx) owns `calendar: CalendarData`, fetches again when the month changes, fetches the carry-over candidates from `GET /api/tasks/unfinished` whenever the month view is shown, and switches between the month grid and the day view.
+- [resources/js/pages/home.tsx](resources/js/pages/home.tsx) holds the visible month and the selected day, and switches between the month view (`CalendarHeader` + `MonthGrid` of `DayCell`s) and `DayView`.
+- [resources/js/hooks/use-calendar.ts](resources/js/hooks/use-calendar.ts) owns `calendar: CalendarData`, fetches again when the month changes, fetches the carry-over candidates from `GET /api/tasks/unfinished` whenever the month view is shown, and carries tasks over.
 - [resources/js/components/day-panel-content.tsx](resources/js/components/day-panel-content.tsx) renders a day: tasks (dnd-kit sortable), add/edit dialogs and the note.
 - [resources/js/hooks/useTaskActions.ts](resources/js/hooks/useTaskActions.ts) makes the per-day API calls and patches local state through `updateData(prev => next)`. It does not fetch again.
 - Priority labels and styles live in [resources/js/constants/priority.ts](resources/js/constants/priority.ts).

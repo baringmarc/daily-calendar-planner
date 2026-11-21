@@ -124,7 +124,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | FR-D1 | Shows the weekday and full date, and a back button to the month view. | ✅ |
 | FR-D2 | Shows the task list, a completion percentage and a progress bar. | ✅ |
 | FR-D3 | An empty day shows an empty state with an "Add Task" action. | ✅ |
-| FR-D4 | Shows an editable note for the day (max 500 chars). Changes are saved automatically and are never lost or overwritten by stale state. | ⚠️ [BUG-07](tasks.md), [BUG-08](tasks.md), [UX-09](tasks.md) |
+| FR-D4 | Shows an editable note for the day (max 500 chars). Changes are saved automatically and are never lost or overwritten by stale state. | ⚠️ Saved on blur, not automatically yet ([UX-09](tasks.md)) |
 
 ### 4.4 Tasks
 
@@ -161,7 +161,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | `id` | bigint PK | |
 | `user_id` | FK → users | cascade on delete, indexed |
 | `date` | date | indexed |
-| `note` | string(255), nullable | ⚠️ Validation allows 500 chars ([BUG-08](tasks.md)) |
+| `note` | text, nullable | Validated to 500 chars |
 | timestamps | | |
 | | | unique `(user_id, date)` |
 

@@ -16,12 +16,13 @@ import {
     useSensor,
     useSensors,
 } from '@dnd-kit/core';
-import { format, isToday, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { CheckCircle2, Circle, GripVertical, Repeat } from 'lucide-react';
 import { useState } from 'react';
 import { PRIORITY_MAP, PRIORITY_STYLES } from '@/constants/priority';
 import { describeRecurrence } from '@/constants/recurrence';
 import { dayKey } from '@/hooks/use-calendar';
+import { isToday } from '@/lib/clock';
 import { cn } from '@/lib/utils';
 import type { CalendarData, Task } from '@/types';
 

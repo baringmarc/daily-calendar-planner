@@ -13,7 +13,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'timezone', 'week_starts_on'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -31,7 +31,17 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'week_starts_on' => 'integer',
         ];
+    }
+
+    /**
+     * The first day of the week (0 = Sunday ... 6 = Saturday) for the
+     * calendar API's range, the grid and weekly repeat rules (FEAT-01).
+     */
+    public function weekStartsOn(): int
+    {
+        return $this->week_starts_on ?? (int) config('calendar.week_starts_on');
     }
 
     public function calendarDays(): HasMany

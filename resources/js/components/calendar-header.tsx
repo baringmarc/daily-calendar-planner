@@ -9,6 +9,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { today } from '@/lib/clock';
 import type { CalendarView } from '@/types';
 
 const VIEWS: { value: CalendarView; label: string }[] = [
@@ -37,7 +38,7 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => i);
 const YEARS_AROUND = 10;
 
 function yearOptions(shownYear: number): number[] {
-    const thisYear = new Date().getFullYear();
+    const thisYear = today().getFullYear();
     const years = Array.from(
         { length: YEARS_AROUND * 2 + 1 },
         (_, i) => thisYear - YEARS_AROUND + i,

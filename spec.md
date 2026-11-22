@@ -75,13 +75,14 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 - **Order:** tasks in a day are shown in ascending `order`. A new task goes to the bottom (`max(order) + 1`). Reordering rewrites the day's orders as `1..n`.
 
 ### 3.3 "Today" and time zones
-- "Today" is the current date **in the user's time zone**. The backend and frontend must agree on it. Until it is stored on the user ([FEAT-01](tasks.md)), the browser sends its time zone with every request.
-- Until a per-user setting exists, a single app-level time zone is used consistently on both sides. ⬜ [FEAT-01](tasks.md)
+- "Today" is the current date **in the user's time zone**. The backend and frontend must agree on it.
+- The zone is stored on the user ([decision D8](#9-decisions-and-open-questions)). The browser sends its own zone in the `X-Timezone` header on every request, and the first signed-in request that carries a valid one (signing in, registering, or the next request of an older session) stores it on a user who has none. After that it only changes under Settings → Calendar, which also offers "Use this device's time zone" when the device differs.
+- The server (`App\Support\UserClock`) and the browser (`resources/js/lib/clock.ts`) both use the stored zone, so a device set to another zone doesn't move "today". Until one is stored, both use the browser's zone, and the server falls back to the app zone (UTC) without a valid header.
 
 ### 3.4 Week layout
 - The month grid shows complete weeks: from the start of the week containing the 1st to the end of the week containing the last day.
 - A month needs 4, 5 or 6 rows. The grid must fit all of them.
-- The week starts on **Monday** ([decision D2](#9-decisions-and-open-questions)). The weekday headers run Mon → Sun, and the backend's date range uses the same week start as the frontend grid. Both read it from `config/calendar.php`, which reaches the frontend as the `weekStartsOn` prop. A user-selectable week start is planned, defaulting to Monday. ⬜ [FEAT-01](tasks.md)
+- The week starts on the user's chosen day (Settings → Calendar), by default **Monday** ([decision D2](#9-decisions-and-open-questions), `config/calendar.php`). The weekday headers follow it, and the backend's date range uses the same week start as the frontend grid: `User::weekStartsOn()` reaches the frontend as the `weekStartsOn` prop. "Every N weeks" repeat rules count weeks from it too, so changing it can shift which weeks those rules land in from then on.
 
 ### 3.5 Carry-over
 - An **unfinished past task** is a task with `is_finished = false` on a date strictly **before today**. Tasks on today or future dates are never offered for carry-over.
@@ -112,6 +113,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | FR-A3 | Users can update their profile and password, delete their account, and choose light, dark or system appearance. | ✅ |
 | FR-A4 | Guests visiting `/` see the welcome page. Signed-in users visiting `/` see the calendar. | ✅ |
 | FR-A5 | Deleting an account deletes all of its calendar days and tasks (cascade). | ✅ |
+| FR-A6 | Users can choose their time zone and the first day of the week under Settings → Calendar ([§3.3](#33-today-and-time-zones), [§3.4](#34-week-layout)). The time zone is detected from the browser until then. | ✅ |
 
 ### 4.2 Month view
 
@@ -181,7 +183,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 
 ### 5.1 Current schema
 
-**`users`**: Laravel starter-kit columns plus Fortify 2FA columns (`two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`).
+**`users`**: Laravel starter-kit columns plus Fortify 2FA columns (`two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`), and the calendar settings: `timezone` (string, nullable, an IANA zone; null until detected) and `week_starts_on` (tinyint, nullable, 0 = Sunday … 6 = Saturday; null means the app default).
 
 **`calendar_days`**
 
@@ -315,7 +317,7 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 |---|---|
 | Security | Every resource is scoped to its owner, enforced by policies and tested ([SEC-01](tasks.md)). Standard Laravel CSRF and session protections apply. Production passwords: min 12 chars, mixed case, numbers, symbols, not compromised (already configured). |
 | Validation | All input is validated in Form Requests, and validation limits match the column sizes. |
-| Time | Server, client and stored dates agree on "today" and on week boundaries. No hardcoded time zones. Until FEAT-01 stores a zone per user, the browser sends its zone in the `X-Timezone` header and the server falls back to the app time zone. |
+| Time | Server, client and stored dates agree on "today" and on week boundaries. No hardcoded time zones. The user's stored zone decides "today" on both sides (D8); until one is stored, the browser's zone from the `X-Timezone` header, then the app time zone. |
 | Responsiveness | Usable from 360px phone width up to desktop. No hover-only actions. |
 | Accessibility | Icon-only buttons have accessible names. The calendar and task list work with the keyboard. Colour isn't the only way priority is shown (a text label is also shown). |
 | Feedback | Every mutation shows success or failure to the user. Optimistic updates roll back on failure. |

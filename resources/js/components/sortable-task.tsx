@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { addDays, format, isToday, isTomorrow } from 'date-fns';
+import { addDays, format } from 'date-fns';
 import { motion } from 'framer-motion';
 import {
     CalendarClock,
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { PRIORITY_MAP, PRIORITY_STYLES } from '@/constants/priority';
 import { describeRecurrence } from '@/constants/recurrence';
+import { isToday, isTomorrow, today } from '@/lib/clock';
 import { cn } from '@/lib/utils';
 
 import type { Task } from '@/types';
@@ -144,7 +145,7 @@ export function SortableTask({
                     <DropdownMenuLabel>Move to</DropdownMenuLabel>
                     {!isToday(date) && (
                         <DropdownMenuItem
-                            onSelect={() => onMove(task, ymd(new Date()))}
+                            onSelect={() => onMove(task, ymd(today()))}
                         >
                             Today
                         </DropdownMenuItem>
@@ -152,7 +153,7 @@ export function SortableTask({
                     {!isTomorrow(date) && (
                         <DropdownMenuItem
                             onSelect={() =>
-                                onMove(task, ymd(addDays(new Date(), 1)))
+                                onMove(task, ymd(addDays(today(), 1)))
                             }
                         >
                             Tomorrow

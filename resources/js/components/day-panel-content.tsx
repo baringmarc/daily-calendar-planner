@@ -22,7 +22,6 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-import { isPast, isToday } from 'date-fns';
 import {
     AlignLeft,
     CalendarIcon,
@@ -57,6 +56,7 @@ import {
 } from '@/hooks/use-task-list-view';
 import type { TaskListView, TaskSort } from '@/hooks/use-task-list-view';
 import { useTaskActions } from '@/hooks/useTaskActions';
+import { isBeforeToday, isToday } from '@/lib/clock';
 import { cn } from '@/lib/utils';
 import type { DayData, Task } from '@/types';
 import { Button } from './ui/button';
@@ -98,7 +98,7 @@ function emptyDayCopy(date: Date): { title: string; body: string } {
         };
     }
 
-    if (isPast(date)) {
+    if (isBeforeToday(date)) {
         return {
             title: 'Nothing was planned',
             body: 'No tasks were added to this day. You can still add one, or write a note about how it went.',

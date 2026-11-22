@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\CalendarSettingsController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('settings/password', [SecurityController::class, 'update'])
         ->middleware('throttle:6,1')
         ->name('user-password.update');
+
+    Route::get('settings/calendar', [CalendarSettingsController::class, 'edit'])->name('calendar-settings.edit');
+    Route::patch('settings/calendar', [CalendarSettingsController::class, 'update'])->name('calendar-settings.update');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
 });

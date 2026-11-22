@@ -48,7 +48,7 @@ class RecurringTaskService
             'generated_through' => $date->toDateString(),
         ]);
 
-        $this->ensureOccursOn($rule, $date);
+        $this->ensureOccursOn($rule, $date, $user->weekStartsOn());
 
         $rule->save();
         $task->update(['recurring_task_id' => $rule->id]);
@@ -76,7 +76,7 @@ class RecurringTaskService
             ->get();
 
         foreach ($rules as $rule) {
-            DB::transaction(fn () => $this->generateRule($rule, $today, $limit));
+            DB::transaction(fn () => $this->generateRule($rule, $today, $limit, $user->weekStartsOn()));
         }
     }
 
@@ -135,7 +135,7 @@ class RecurringTaskService
                     'starts_on' => $date->toDateString(),
                     'generated_through' => $cutoff->subDay()->toDateString(),
                 ]);
-                $this->ensureOccursOn($rule, $date);
+                $this->ensureOccursOn($rule, $date, $user->weekStartsOn());
                 $this->laterOccurrences($rule, $task, $cutoff)->delete();
             } else {
                 $this->laterOccurrences($rule, $task, $cutoff)->update([
@@ -150,7 +150,7 @@ class RecurringTaskService
         });
     }
 
-    private function generateRule(RecurringTask $rule, CarbonImmutable $today, CarbonImmutable $limit): void
+    private function generateRule(RecurringTask $rule, CarbonImmutable $today, CarbonImmutable $limit, int $weekStartsOn): void
     {
         $from = collect([
             $today,
@@ -167,8 +167,6 @@ class RecurringTaskService
             ->whereBetween('calendar_days.date', [$from->toDateString(), $to->toDateString()])
             ->pluck('calendar_days.date')
             ->flip();
-
-        $weekStartsOn = (int) config('calendar.week_starts_on');
 
         for ($date = $from; $date->lte($to); $date = $date->addDay()) {
             if ($rule->occursOn($date, $weekStartsOn) && ! $taken->has($date->toDateString())) {
@@ -242,7 +240,7 @@ class RecurringTaskService
      *
      * @throws ValidationException
      */
-    private function ensureOccursOn(RecurringTask $rule, CarbonImmutable $date): void
+    private function ensureOccursOn(RecurringTask $rule, CarbonImmutable $date, int $weekStartsOn): void
     {
         if ($rule->ends_on !== null && $rule->ends_on->lt($date)) {
             throw ValidationException::withMessages([
@@ -250,7 +248,7 @@ class RecurringTaskService
             ]);
         }
 
-        if (! $rule->occursOn($date, (int) config('calendar.week_starts_on'))) {
+        if (! $rule->occursOn($date, $weekStartsOn)) {
             throw ValidationException::withMessages([
                 'recurrence.weekdays' => 'The repeat days must include the task\'s day.',
             ]);

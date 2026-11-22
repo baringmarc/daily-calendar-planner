@@ -14,6 +14,7 @@ import {
     fetchUnfinishedTasks,
     queryKeys,
 } from '@/lib/calendar-api';
+import { today as todayInUserZone } from '@/lib/clock';
 import type { CalendarData, DayData, UnfinishedTasks } from '@/types';
 
 // Shared by every day without saved data, so it keeps the same identity
@@ -84,7 +85,7 @@ export function useCalendar({
     // "Not now" (or carrying tasks over) hides the prompt for the rest of
     // the day, in this browser (UX-08).
     const userId = usePage().props.auth.user.id;
-    const today = dayKey(new Date());
+    const today = dayKey(todayInUserZone());
     const [dismissedOn, setDismissedOn] = useState(() =>
         readDismissedOn(userId),
     );

@@ -1,8 +1,9 @@
-import { format, isSameMonth, isToday } from 'date-fns';
+import { format, isSameMonth } from 'date-fns';
 import type { KeyboardEvent } from 'react';
 import { useRef, useState } from 'react';
 import { DayCell } from '@/components/day-cell';
 import { dayKey } from '@/hooks/use-calendar';
+import { isToday } from '@/lib/clock';
 import type { CalendarData } from '@/types';
 
 // How far each key moves the focus through the grid, in days.

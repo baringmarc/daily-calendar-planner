@@ -54,7 +54,7 @@ class HomeController extends Controller
         $view = $request->query('view');
 
         return Inertia::render('home', [
-            'weekStartsOn' => self::weekStartsOn(),
+            'weekStartsOn' => $user->weekStartsOn(),
             'month' => self::dateFromQuery($request, 'month', 'Y-m') ?? ($day !== null ? substr($day, 0, 7) : null),
             'day' => $day,
             'view' => in_array($view, self::VIEWS, true) ? $view : 'month',
@@ -74,7 +74,7 @@ class HomeController extends Controller
         $startOfMonth = $baseDate->copy()->startOfMonth();
         $endOfMonth = $baseDate->copy()->endOfMonth();
 
-        $weekStartsOn = self::weekStartsOn();
+        $weekStartsOn = $request->user()->weekStartsOn();
         $startDate = $startOfMonth->copy()->startOfWeek($weekStartsOn)->toDateString();
         $endDate = $endOfMonth->copy()->endOfWeek(($weekStartsOn + 6) % 7)->toDateString();
 
@@ -125,13 +125,5 @@ class HomeController extends Controller
         // createFromFormat rolls invalid dates over (2026-02-30 -> March 2),
         // so only accept a value that formats back to itself.
         return $date?->format($format) === $value ? $value : null;
-    }
-
-    /**
-     * The first day of the week, shared by the API's date range and the grid.
-     */
-    private static function weekStartsOn(): int
-    {
-        return (int) config('calendar.week_starts_on');
     }
 }

@@ -1,4 +1,4 @@
-import { eachDayOfInterval, endOfMonth, format, isToday } from 'date-fns';
+import { eachDayOfInterval, endOfMonth, format } from 'date-fns';
 import {
     CalendarIcon,
     CheckCircle2,
@@ -9,6 +9,7 @@ import {
 import { useMemo } from 'react';
 import { PRIORITY_MAP, PRIORITY_STYLES } from '@/constants/priority';
 import { dayKey } from '@/hooks/use-calendar';
+import { isToday } from '@/lib/clock';
 import { cn } from '@/lib/utils';
 import type { CalendarData, Task } from '@/types';
 

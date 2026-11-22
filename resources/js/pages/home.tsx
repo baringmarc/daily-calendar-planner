@@ -33,6 +33,7 @@ import type { ShortcutHandlers } from '@/hooks/use-keyboard-shortcuts';
 import { useMoveTask } from '@/hooks/use-move-task';
 import { useToggleFinished } from '@/hooks/use-toggle-finished';
 import AppLayout from '@/layouts/app-layout';
+import { today } from '@/lib/clock';
 import { home } from '@/routes';
 import type { CalendarView } from '@/types';
 
@@ -125,7 +126,7 @@ export default function Home({
     // its data is loaded.
     const selectedDay = useMemo(() => (day ? parseISO(day) : null), [day]);
     const weekStart = useMemo(
-        () => startOfWeek(week ? parseISO(week) : new Date(), { weekStartsOn }),
+        () => startOfWeek(week ? parseISO(week) : today(), { weekStartsOn }),
         [week, weekStartsOn],
     );
     const weekKey = dayKey(weekStart);
@@ -134,7 +135,7 @@ export default function Home({
     const requestedMonth =
         view === 'week'
             ? monthKeyOf(weekStart)
-            : (month ?? monthKeyOf(new Date()));
+            : (month ?? monthKeyOf(today()));
     const monthKey =
         selectedDay && !isInMonthGrid(selectedDay, requestedMonth, weekStartsOn)
             ? monthKeyOf(selectedDay)
@@ -219,9 +220,9 @@ export default function Home({
         if (next === 'week') {
             // The week with today in it when it's this month, else the
             // month's first week.
-            const today = new Date();
+            const now = today();
 
-            showWeek(isSameMonth(today, monthStart) ? today : monthStart);
+            showWeek(isSameMonth(now, monthStart) ? now : monthStart);
         } else {
             // A week can span two months: show the one most of it is in.
             showMonth(
@@ -232,16 +233,16 @@ export default function Home({
     };
 
     const openToday = () => {
-        const today = new Date();
+        const now = today();
 
         openDay(
-            today,
+            now,
             view === 'week'
                 ? {
                       ...here,
-                      week: dayKey(startOfWeek(today, { weekStartsOn })),
+                      week: dayKey(startOfWeek(now, { weekStartsOn })),
                   }
-                : { ...here, month: monthKeyOf(today) },
+                : { ...here, month: monthKeyOf(now) },
         );
     };
 
@@ -263,7 +264,7 @@ export default function Home({
     const shortcuts: ShortcutHandlers = selectedDay
         ? {
               n: () => setAddTaskRequested(true),
-              t: () => showDayInDayView(new Date()),
+              t: () => showDayInDayView(today()),
               ArrowLeft: () => showDayInDayView(addDays(selectedDay, -1)),
               ArrowRight: () => showDayInDayView(addDays(selectedDay, 1)),
               Escape: backToCalendar,

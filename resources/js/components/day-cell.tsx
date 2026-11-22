@@ -1,6 +1,7 @@
-import { format, isToday } from 'date-fns';
+import { format } from 'date-fns';
 import { CheckCheck, CheckSquare, Square, StickyNote } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { isToday } from '@/lib/clock';
 import { cn } from '@/lib/utils';
 import type { DayData } from '@/types';
 

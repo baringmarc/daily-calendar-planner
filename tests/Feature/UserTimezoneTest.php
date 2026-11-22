@@ -9,7 +9,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * "Today" is worked out in the time zone the browser sends in X-Timezone.
+ * Without a stored time zone, "today" is worked out in the zone the browser
+ * sends in X-Timezone. A stored one wins (see Settings\CalendarSettingsTest).
  */
 class UserTimezoneTest extends TestCase
 {

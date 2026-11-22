@@ -207,10 +207,17 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-02, FEAT-09 an
 
 ## Phase 5: Feature backlog (to discuss)
 
-**Next up (spec decision D4):** FEAT-02, FEAT-09 and FEAT-10, once phases 0–4 are done. The rest aren't prioritised yet. Before starting any feature, add acceptance criteria to it.
+**Next up (spec decision D4):** FEAT-02, FEAT-09 and FEAT-10, once phases 0–4 are done. Then FEAT-05, FEAT-07 and FEAT-01 (chosen 2026-11-22). The rest aren't prioritised yet. Before starting any feature, add acceptance criteria to it.
 
 ### Small to medium
-- [ ] **FEAT-01: User settings for time zone and week start** · `M`. Detect the time zone on first login and store it on the user. Add a week-start setting under Settings (default Monday), used by both the API and the grid. This is the long-term fix for BUG-02 and BUG-04.
+- [ ] **FEAT-01: User settings for time zone and week start** · `M` · ⭐ next up. Detect the time zone on first login and store it on the user. Add a week-start setting under Settings (default Monday), used by both the API and the grid. This is the long-term fix for BUG-02 and BUG-04.
+  - Done when:
+    - Users have a nullable `timezone` and a nullable `week_starts_on` (0 = Sunday … 6 = Saturday). An empty week start means the app default (`config/calendar.php`, Monday).
+    - The first signed-in request that carries a valid `X-Timezone` header (signing in, registering, or the next request of an existing session) stores that zone on a user who has none. A stored zone is never overwritten this way, and an invalid header is never stored.
+    - "Today" comes from the stored zone, on the server (`UserClock`) and in the browser, so the two agree even when the device is set to another zone (spec decision D8). Without a stored zone it falls back to the header, then to the app zone, as before.
+    - Settings has a Calendar page (`/settings/calendar`) with a time zone picker (every IANA zone), a "Use this device's time zone" shortcut when the device's zone differs, and a week-start picker. An unknown zone or a week start outside 0–6 is a 422.
+    - The week start drives the API's date range, the month grid, the week view, the weekday headers, the repeat-rule weekday picker and "every N weeks" rules. After saving, the calendar loads again with the new settings.
+    - Feature tests cover the settings page, validation, detection (stored once, never overwritten, invalid ignored), the stored zone winning over the header, and the week start changing the API's range and the `weekStartsOn` prop.
 - [x] **FEAT-02: Move or snooze a task to another date** · `M` · ⭐ next up. "Move to tomorrow" or a date picker from the task menu, plus drag a task onto a calendar day. Needs a `PUT /api/tasks/{task}/move` endpoint.
   - Done when:
     - `PUT /api/tasks/{task}/move` takes `{ date: YYYY-MM-DD }`, finds or creates the user's day for that date, and appends the task after that day's tasks. It returns the task. Another user's task is a 403, an invalid date a 422, and moving a task to the day it's already on changes nothing.
@@ -219,9 +226,21 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-02, FEAT-09 an
     - In the week view (FEAT-10), a task can be dragged onto another day.
 - [ ] **FEAT-03: Natural-language quick add** · `M`. e.g. "Call Bob tomorrow !high" parses the date and priority.
 - [ ] **FEAT-04: Optional time and duration on tasks** · `M`. Optional due time or time block, with "all day" as the default. This conflicts with a spec non-goal, so it needs a scope decision.
-- [ ] **FEAT-05: Sort, filter and hide completed** · `S`. Sort by priority or status in the day view, and a "hide completed" toggle.
+- [ ] **FEAT-05: Sort, filter and hide completed** · `S` · ⭐ next up. Sort by priority or status in the day view, and a "hide completed" toggle.
+  - Done when:
+    - The day view's task list has a view menu with a sort ("My order", the default, which is the drag order; "Priority", Urgent first; "Status", unfinished first) and a "Hide completed" toggle. Ties keep "My order".
+    - The choice applies to every day, and is remembered in this browser (not on the server).
+    - Hidden finished tasks are counted under the list ("2 completed hidden · Show"). If every task is finished and hidden, the list says so instead of showing the empty-day state. The progress bar always counts every task.
+    - Tasks can only be dragged to reorder in "My order". With completed tasks hidden, the visible tasks are reordered among themselves and the hidden ones keep their places.
+    - It works by keyboard and on touch, and nothing changes on the server.
 - [ ] **FEAT-06: Search** · `M`. Search across all tasks and notes, and jump to the day.
-- [ ] **FEAT-07: Keyboard shortcuts** · `S`. `n` new task, `t` today, `←/→` month or day, `Esc` back to the month view, `?` help.
+- [ ] **FEAT-07: Keyboard shortcuts** · `S` · ⭐ next up. `n` new task, `t` today, `←/→` month or day, `Esc` back to the month view, `?` help.
+  - Done when:
+    - `n` opens the Add Task dialog: for the open day in the day view, or for today in a calendar view.
+    - `t` opens today. `←`/`→` page the month (month and agenda views), the week (week view) or the day (day view). `m`, `w` and `a` switch to the Month, Week and Agenda views.
+    - `Esc` in the day view goes back to the calendar view it was opened from, like its back button. Paging day to day doesn't add history entries, so back still returns to the calendar.
+    - `?` opens a dialog listing every shortcut. The calendar header has a button that opens it too (hidden on touch screens).
+    - Shortcuts are ignored while typing in a field, while a dialog or menu is open, while a task is being dragged with the keyboard, and when Ctrl, Cmd or Alt is held.
 - [ ] ~~**FEAT-08: Carry-over history**~~ · not planned. We decided carry-over only moves tasks (spec decision D1). Kept here for reference: it would record `carried_from_date` / `carry_count` and show a "carried over ×3" badge.
 
 ### Larger

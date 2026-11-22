@@ -41,6 +41,7 @@ export function SortableTask({
     onDelete,
     onMove,
     onPickMoveDate,
+    canReorder = true,
 }: {
     task: Task;
     // The day the task is on.
@@ -52,11 +53,14 @@ export function SortableTask({
     onMove: (task: Task, to: string) => void;
     // Opens the date picker for "Pick a date…".
     onPickMoveDate: (task: Task) => void;
+    // False while the list is sorted (FEAT-05): only "My order" can be
+    // dragged into a new order.
+    canReorder?: boolean;
 }) {
     const priorityStyle = PRIORITY_STYLES[task.priority];
 
     const { attributes, listeners, setNodeRef, transform, transition } =
-        useSortable({ id: task.id });
+        useSortable({ id: task.id, disabled: !canReorder });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -170,20 +174,22 @@ export function SortableTask({
                 <Trash2 className="h-4 w-4" />
             </button>
 
-            <button
-                type="button"
-                {...attributes}
-                {...listeners}
-                aria-label={`Reorder: ${task.description}`}
-                className={cn(
-                    ROW_ACTION,
-                    // touch-none: a touch on the handle drags the task
-                    // instead of scrolling the page.
-                    'cursor-grab touch-none hover:text-foreground active:cursor-grabbing',
-                )}
-            >
-                <Logs className="h-4 w-4" />
-            </button>
+            {canReorder && (
+                <button
+                    type="button"
+                    {...attributes}
+                    {...listeners}
+                    aria-label={`Reorder: ${task.description}`}
+                    className={cn(
+                        ROW_ACTION,
+                        // touch-none: a touch on the handle drags the task
+                        // instead of scrolling the page.
+                        'cursor-grab touch-none hover:text-foreground active:cursor-grabbing',
+                    )}
+                >
+                    <Logs className="h-4 w-4" />
+                </button>
+            )}
         </motion.div>
     );
 }

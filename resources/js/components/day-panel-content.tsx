@@ -28,16 +28,34 @@ import {
     CalendarIcon,
     Check,
     CheckSquare,
+    ListFilter,
     Plus,
 } from 'lucide-react';
 import { useState } from 'react';
 import { MoveTaskDialog } from '@/components/move-task-dialog';
 import { SortableTask } from '@/components/sortable-task';
 import { TaskFormDialog } from '@/components/task-form-dialog';
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { NOTE_MAX } from '@/constants/limits';
 import { useMoveTask } from '@/hooks/use-move-task';
 import { useNoteAutosave } from '@/hooks/use-note-autosave';
 import type { NoteSaveStatus } from '@/hooks/use-note-autosave';
+import {
+    TASK_SORTS,
+    arrangeTasks,
+    mergeReorder,
+    useTaskListView,
+} from '@/hooks/use-task-list-view';
+import type { TaskListView, TaskSort } from '@/hooks/use-task-list-view';
 import { useTaskActions } from '@/hooks/useTaskActions';
 import { cn } from '@/lib/utils';
 import type { DayData, Task } from '@/types';
@@ -116,6 +134,65 @@ function EmptyDay({ date, onAddTask }: { date: Date; onAddTask: () => void }) {
     );
 }
 
+// Sort and "Hide completed" for the task list (FEAT-05).
+function TaskListViewMenu({
+    view,
+    onSortChange,
+    onHideCompletedChange,
+}: {
+    view: TaskListView;
+    onSortChange: (sort: TaskSort) => void;
+    onHideCompletedChange: (hide: boolean) => void;
+}) {
+    const isDefault = view.sort === 'manual' && !view.hideCompleted;
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                        'h-8 gap-1.5 px-2 text-xs text-muted-foreground',
+                        !isDefault && 'text-foreground',
+                    )}
+                >
+                    <ListFilter className="h-4 w-4" />
+                    {isDefault
+                        ? 'View'
+                        : TASK_SORTS.find(({ value }) => value === view.sort)!
+                              .label}
+                    {view.hideCompleted && (
+                        <span className="sr-only">, completed hidden</span>
+                    )}
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                    value={view.sort}
+                    onValueChange={(value) => onSortChange(value as TaskSort)}
+                >
+                    {TASK_SORTS.map(({ value, label }) => (
+                        <DropdownMenuRadioItem key={value} value={value}>
+                            {label}
+                        </DropdownMenuRadioItem>
+                    ))}
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                    checked={view.hideCompleted}
+                    onCheckedChange={(checked) =>
+                        onHideCompletedChange(checked === true)
+                    }
+                >
+                    Hide completed
+                </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
+
 // --- Day Panel Content Component ---
 export function DayPanelContent({
     date,
@@ -148,6 +225,13 @@ export function DayPanelContent({
     // The task whose "Pick a date…" dialog is open.
     const [movingTask, setMovingTask] = useState<Task | null>(null);
 
+    const listView = useTaskListView();
+    // What the list shows, sorted and filtered. Drags and their screen
+    // reader announcements work on this list.
+    const shownTasks = arrangeTasks(dayData.tasks, listView.view);
+    const hiddenCount = dayData.tasks.length - shownTasks.length;
+    const canReorder = listView.view.sort === 'manual';
+
     const note = useNoteAutosave({
         savedNote: dayData.calendar_day.note ?? '',
         save: saveNote,
@@ -174,9 +258,9 @@ export function DayPanelContent({
 
     // What screen readers hear while a task is dragged with the keyboard.
     const describe = (id: UniqueIdentifier) =>
-        dayData.tasks.find((t) => t.id === id)?.description ?? 'Task';
+        shownTasks.find((t) => t.id === id)?.description ?? 'Task';
     const position = (id: UniqueIdentifier) =>
-        `position ${dayData.tasks.findIndex((t) => t.id === id) + 1} of ${dayData.tasks.length}`;
+        `position ${shownTasks.findIndex((t) => t.id === id) + 1} of ${shownTasks.length}`;
     const dragAccessibility: DndContextProps['accessibility'] = {
         screenReaderInstructions: {
             draggable:
@@ -207,10 +291,16 @@ export function DayPanelContent({
             return;
         }
 
-        const oldIndex = dayData.tasks.findIndex((t) => t.id === active.id);
-        const newIndex = dayData.tasks.findIndex((t) => t.id === over.id);
+        const oldIndex = shownTasks.findIndex((t) => t.id === active.id);
+        const newIndex = shownTasks.findIndex((t) => t.id === over.id);
 
-        reorderTasks(arrayMove(dayData.tasks, oldIndex, newIndex));
+        // Hidden tasks keep their places (FEAT-05).
+        reorderTasks(
+            mergeReorder(
+                dayData.tasks,
+                arrayMove(shownTasks, oldIndex, newIndex),
+            ),
+        );
     };
 
     const taskFormDialog = (
@@ -253,9 +343,18 @@ export function DayPanelContent({
                             Tasks
                         </h3>
                         {dayData.tasks.length > 0 && (
-                            <span className="text-xs font-medium text-muted-foreground">
-                                {progressPercent}% Complete
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                    {progressPercent}% Complete
+                                </span>
+                                <TaskListViewMenu
+                                    view={listView.view}
+                                    onSortChange={listView.setSort}
+                                    onHideCompletedChange={
+                                        listView.setHideCompleted
+                                    }
+                                />
+                            </div>
                         )}
                     </div>
 
@@ -283,7 +382,7 @@ export function DayPanelContent({
                                 {activeId ? (
                                     <div className="rounded-lg border bg-card p-3 shadow-lg">
                                         {
-                                            dayData.tasks.find(
+                                            shownTasks.find(
                                                 (t) => t.id === activeId,
                                             )?.description
                                         }
@@ -292,11 +391,18 @@ export function DayPanelContent({
                             </DragOverlay>
 
                             <SortableContext
-                                items={dayData.tasks.map((task) => task.id)}
+                                items={shownTasks.map((task) => task.id)}
                                 strategy={verticalListSortingStrategy}
                             >
                                 <div className="space-y-2">
-                                    {dayData.tasks.map((task) => (
+                                    {shownTasks.length === 0 && (
+                                        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                                            {dayData.tasks.length === 1
+                                                ? 'The only task is done.'
+                                                : `All ${dayData.tasks.length} tasks are done.`}
+                                        </p>
+                                    )}
+                                    {shownTasks.map((task) => (
                                         <SortableTask
                                             key={task.id}
                                             task={task}
@@ -306,11 +412,27 @@ export function DayPanelContent({
                                             onDelete={deleteTask}
                                             onMove={moveTask}
                                             onPickMoveDate={setMovingTask}
+                                            canReorder={canReorder}
                                         />
                                     ))}
                                 </div>
                             </SortableContext>
                         </DndContext>
+
+                        {hiddenCount > 0 && (
+                            <p className="text-sm text-muted-foreground">
+                                {hiddenCount} completed hidden ·{' '}
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        listView.setHideCompleted(false)
+                                    }
+                                    className="rounded-sm font-medium text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    Show
+                                </button>
+                            </p>
+                        )}
 
                         <Button onClick={openAddTask} className="gap-2">
                             <Plus className="h-4 w-4" />

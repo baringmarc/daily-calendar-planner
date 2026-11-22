@@ -143,6 +143,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | FR-D2 | Shows the task list, a completion percentage and a progress bar. | ✅ |
 | FR-D3 | A day without tasks shows an empty state, worded for a past day, today or a future day, with an "Add Task" action. The note stays available. | ✅ |
 | FR-D4 | Shows an editable note for the day (max 500 chars). Changes are saved automatically (shortly after typing stops, on blur, and on leaving the day), with a Saving…/Saved indicator, and are never lost or overwritten by stale state. | ✅ |
+| FR-D5 | A view menu sorts the task list by "My order" (the default, the drag order), priority (Urgent first) or status (unfinished first), and can hide completed tasks, counted under the list with a "Show" link. The choice applies to every day and is remembered in the browser. Tasks can only be dragged in "My order", and hidden tasks keep their places when the shown ones are reordered. | ✅ |
 
 ### 4.4 Tasks
 

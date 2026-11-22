@@ -1,5 +1,5 @@
 import { addDays, format, isSameMonth, isSameYear, setMonth } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Keyboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -60,6 +60,7 @@ export function CalendarHeader({
     onPrev,
     onNext,
     onToday,
+    onShowShortcuts,
     onMonthSelect,
     onYearSelect,
 }: {
@@ -73,6 +74,8 @@ export function CalendarHeader({
     onPrev: () => void;
     onNext: () => void;
     onToday: () => void;
+    // Opens the keyboard shortcuts dialog (FEAT-07).
+    onShowShortcuts: () => void;
     onMonthSelect: (month: number) => void;
     onYearSelect: (year: number) => void;
 }) {
@@ -104,6 +107,17 @@ export function CalendarHeader({
                 </div>
                 <Button variant="outline" className="h-10" onClick={onToday}>
                     Today
+                </Button>
+                {/* Touch screens have no keyboard to use them with. */}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 text-muted-foreground pointer-coarse:hidden"
+                    onClick={onShowShortcuts}
+                    aria-label="Keyboard shortcuts"
+                    title="Keyboard shortcuts (?)"
+                >
+                    <Keyboard className="h-5 w-5" />
                 </Button>
             </div>
 

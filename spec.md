@@ -169,6 +169,14 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 
 ---
 
+### 4.6 Keyboard shortcuts
+
+| ID | Requirement | Status |
+|---|---|---|
+| FR-K1 | `n` opens Add Task (for the open day, or for today from a calendar view), `t` opens today, `←`/`→` page the month, week or day, `m`/`w`/`a` switch views, `Esc` goes back from a day to its calendar view, and `?` lists the shortcuts. The calendar header has a button for the list too, hidden on touch screens. | ✅ |
+| FR-K2 | Paging day to day replaces the history entry, so back still returns to the calendar view. | ✅ |
+| FR-K3 | Shortcuts are ignored while typing in a field, while a dialog or menu is open, during a keyboard drag, and with Ctrl, Cmd or Alt held. | ✅ |
+
 ## 5. Data model
 
 ### 5.1 Current schema

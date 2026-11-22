@@ -10,11 +10,16 @@ export function DayView({
     dayData,
     updateData,
     onBack,
+    addTaskRequested,
+    onAddTaskRequestHandled,
 }: {
     date: Date;
     dayData: DayData;
     updateData: (updater: (prev: DayData) => DayData) => void;
     onBack: () => void;
+    // Set by the `n` shortcut (FEAT-07).
+    addTaskRequested: boolean;
+    onAddTaskRequestHandled: () => void;
 }) {
     return (
         <motion.div
@@ -55,6 +60,8 @@ export function DayView({
                         date={date}
                         dayData={dayData}
                         updateData={updateData}
+                        addTaskRequested={addTaskRequested}
+                        onAddTaskRequestHandled={onAddTaskRequestHandled}
                     />
                 </div>
             </div>

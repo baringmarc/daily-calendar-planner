@@ -31,7 +31,7 @@ import {
     ListFilter,
     Plus,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MoveTaskDialog } from '@/components/move-task-dialog';
 import { SortableTask } from '@/components/sortable-task';
 import { TaskFormDialog } from '@/components/task-form-dialog';
@@ -198,10 +198,15 @@ export function DayPanelContent({
     date,
     dayData,
     updateData,
+    addTaskRequested,
+    onAddTaskRequestHandled,
 }: {
     date: Date;
     dayData: DayData;
     updateData: (updater: (prev: DayData) => DayData) => void;
+    // The `n` shortcut asks for the Add Task dialog (FEAT-07).
+    addTaskRequested: boolean;
+    onAddTaskRequestHandled: () => void;
 }) {
     const {
         taskDialog,
@@ -220,6 +225,13 @@ export function DayPanelContent({
         dayData,
         updateData,
     });
+
+    useEffect(() => {
+        if (addTaskRequested) {
+            onAddTaskRequestHandled();
+            openAddTask();
+        }
+    }, [addTaskRequested, onAddTaskRequestHandled, openAddTask]);
 
     const moveTask = useMoveTask();
     // The task whose "Pick a date…" dialog is open.

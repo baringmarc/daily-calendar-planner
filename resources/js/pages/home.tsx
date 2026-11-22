@@ -18,15 +18,18 @@ import {
 } from 'date-fns';
 import type { Day } from 'date-fns';
 import { AnimatePresence } from 'framer-motion';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { AgendaView } from '@/components/agenda-view';
 import { CalendarHeader } from '@/components/calendar-header';
 import { DayView } from '@/components/day-view';
+import { KeyboardShortcutsDialog } from '@/components/keyboard-shortcuts-dialog';
 import { MonthGrid } from '@/components/month-grid';
 import { Spinner } from '@/components/ui/spinner';
 import { UnfinishedTasksDialog } from '@/components/unfinished-tasks-dialog';
 import { WeekView } from '@/components/week-view';
 import { dayKey, useCalendar } from '@/hooks/use-calendar';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import type { ShortcutHandlers } from '@/hooks/use-keyboard-shortcuts';
 import { useMoveTask } from '@/hooks/use-move-task';
 import { useToggleFinished } from '@/hooks/use-toggle-finished';
 import AppLayout from '@/layouts/app-layout';
@@ -196,6 +199,18 @@ export default function Home({
         }
     };
 
+    // Pages the day view to another day (FEAT-07). It replaces the history
+    // entry, so back still returns to the calendar view behind it.
+    const showDayInDayView = (date: Date) => {
+        const next: Location = { month, day: dayKey(date), view, week };
+
+        if (isDayOpenedFromCalendar()) {
+            rememberDayOpenedFromCalendar(homeUrl(next));
+        }
+
+        navigate(next, 'replace');
+    };
+
     const switchView = (next: CalendarView) => {
         if (next === view) {
             return;
@@ -229,6 +244,46 @@ export default function Home({
                 : { ...here, month: monthKeyOf(today) },
         );
     };
+
+    const showPrev = () =>
+        view === 'week'
+            ? showWeek(subWeeks(weekStart, 1))
+            : showMonth(subMonths(monthStart, 1));
+    const showNext = () =>
+        view === 'week'
+            ? showWeek(addWeeks(weekStart, 1))
+            : showMonth(addMonths(monthStart, 1));
+
+    // Keyboard shortcuts (FEAT-07). `n` asks the day view to open its Add
+    // Task dialog, after opening today when a calendar view is on screen.
+    const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+    const [addTaskRequested, setAddTaskRequested] = useState(false);
+    const showShortcuts = () => setIsShortcutsOpen(true);
+
+    const shortcuts: ShortcutHandlers = selectedDay
+        ? {
+              n: () => setAddTaskRequested(true),
+              t: () => showDayInDayView(new Date()),
+              ArrowLeft: () => showDayInDayView(addDays(selectedDay, -1)),
+              ArrowRight: () => showDayInDayView(addDays(selectedDay, 1)),
+              Escape: backToCalendar,
+              '?': showShortcuts,
+          }
+        : {
+              n: () => {
+                  setAddTaskRequested(true);
+                  openToday();
+              },
+              t: openToday,
+              ArrowLeft: showPrev,
+              ArrowRight: showNext,
+              m: () => switchView('month'),
+              w: () => switchView('week'),
+              a: () => switchView('agenda'),
+              '?': showShortcuts,
+          };
+
+    useKeyboardShortcuts(shortcuts);
 
     const toggleFinished = useToggleFinished();
     const moveTask = useMoveTask();
@@ -268,6 +323,10 @@ export default function Home({
                 carryOverTasks={carryOverTasks}
                 isCarryingOver={isCarryingOver}
             />
+            <KeyboardShortcutsDialog
+                open={isShortcutsOpen}
+                onOpenChange={setIsShortcutsOpen}
+            />
             <AnimatePresence mode="wait">
                 {!selectedDay ? (
                     <div
@@ -286,17 +345,10 @@ export default function Home({
                                 onViewChange={switchView}
                                 currentDate={monthStart}
                                 weekStart={weekStart}
-                                onPrev={() =>
-                                    view === 'week'
-                                        ? showWeek(subWeeks(weekStart, 1))
-                                        : showMonth(subMonths(monthStart, 1))
-                                }
-                                onNext={() =>
-                                    view === 'week'
-                                        ? showWeek(addWeeks(weekStart, 1))
-                                        : showMonth(addMonths(monthStart, 1))
-                                }
+                                onPrev={showPrev}
+                                onNext={showNext}
                                 onToday={openToday}
+                                onShowShortcuts={showShortcuts}
                                 onMonthSelect={(m) =>
                                     showMonth(setMonth(monthStart, m))
                                 }
@@ -339,6 +391,10 @@ export default function Home({
                             updateDayData(selectedDay, updater)
                         }
                         onBack={backToCalendar}
+                        addTaskRequested={addTaskRequested}
+                        onAddTaskRequestHandled={() =>
+                            setAddTaskRequested(false)
+                        }
                     />
                 )}
             </AnimatePresence>

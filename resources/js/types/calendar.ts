@@ -1,15 +1,32 @@
-export type Task = {
-    id: string;
-    description: string;
-    is_finished: boolean;
-    calendar_day_id: string;
-    priority: number;
-    order: number;
+import type { Priority } from '@/constants/priority';
+import type { RepeatFrequency } from '@/constants/recurrence';
+
+// A repeat rule's schedule (FEAT-09). Mirrors RecurringTask::schedule().
+// `weekdays` (0 = Sunday ... 6 = Saturday) is only set for weekly rules.
+export type Recurrence = {
+    frequency: RepeatFrequency;
+    interval: number;
+    weekdays: number[] | null;
+    ends_on: string | null;
 };
 
+// Mirrors App\Http\Resources\TaskResource. Change both together.
+export type Task = {
+    id: number;
+    description: string;
+    is_finished: boolean;
+    calendar_day_id: number;
+    priority: Priority;
+    order: number;
+    // Null for a one-off task.
+    recurrence: Recurrence | null;
+};
+
+// Mirrors App\Http\Resources\CalendarDayResource. `id` is null until the
+// day has been saved: a day row is only created with its first task or note.
 export type CalendarDay = {
-    id: string | null;
-    note: string;
+    id: number | null;
+    note: string | null;
 };
 
 export type DayData = {
@@ -19,30 +36,8 @@ export type DayData = {
 
 export type UnfinishedTasks = Record<string, Task[]>;
 
-export type CalendarData = Record<
-    string,
-    {
-        calendar_day: CalendarDay;
-        tasks: Task[];
-    }
->;
+// `GET /api/calendar`, keyed by Y-m-d date.
+export type CalendarData = Record<string, DayData>;
 
-export type TaskActions = {
-    // state
-    newTask: string;
-    setNewTask: (value: string) => void;
-    isAddingTask: boolean;
-    setIsAddingTask: (value: boolean) => void;
-    currentEditTaskID: string | null;
-    currentEditTask: string;
-    setCurrentEditTask: (value: string) => void;
-    setCurrentEditTaskID: (value: string | null) => void;
-
-    // actions
-    updateNotes: (note: string) => Promise<void>;
-    handleAddTask: (e: React.FormEvent) => Promise<void>;
-    handleDeleteTask: (id: string) => Promise<void>;
-    toggleFinishTask: (id: string, is_finished: boolean) => Promise<void>;
-    toggleEditTask: (id: string, description: string) => void;
-    handleEditTask: (e: React.FormEvent) => Promise<void>;
-};
+// The calendar's views (FEAT-10), from ?view= in the URL.
+export type CalendarView = 'month' | 'week' | 'agenda';

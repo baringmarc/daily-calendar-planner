@@ -2,29 +2,61 @@
 
 namespace App\Models;
 
+use App\Enums\Priority;
+use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Task extends Model
 {
-    /** @use HasFactory<\Database\Factories\TaskFactory> */
+    /** @use HasFactory<TaskFactory> */
     use HasFactory;
 
     protected $table = 'tasks';
+
     protected $primaryKey = 'id';
 
     protected $fillable = [
         'description',
-        'date',
         'is_finished',
         'calendar_day_id',
         'order',
-        'priority'
+        'priority',
+        'recurring_task_id',
     ];
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'priority' => Priority::DEFAULT,
+    ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'calendar_day_id' => 'integer',
+            'recurring_task_id' => 'integer',
+            'is_finished' => 'boolean',
+            'priority' => Priority::class,
+            'order' => 'integer',
+        ];
+    }
 
     public function calendarDay(): BelongsTo
     {
         return $this->belongsTo(CalendarDay::class);
+    }
+
+    /**
+     * The repeat rule this task is an occurrence of, if any (FEAT-09).
+     */
+    public function recurringTask(): BelongsTo
+    {
+        return $this->belongsTo(RecurringTask::class);
     }
 }

@@ -23,8 +23,8 @@ class StoreCalendarDayRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'date' => 'required|date|unique:calendar_days,date,NULL,id,user_id,' . auth()->id(),
-            'note' => 'nullable|string|max:500'
+            'date' => 'required|date|unique:calendar_days,date,NULL,id,user_id,'.auth()->id(),
+            'note' => 'nullable|string|max:500',
         ];
     }
 }

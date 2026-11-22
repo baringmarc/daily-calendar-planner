@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Priority;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class UpdateTaskRequest extends FormRequest
 {
@@ -24,11 +26,11 @@ class UpdateTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // A task's date and order change through their own endpoints
+            // (carry-over, reorder), not here.
             'description' => 'string|max:255',
-            'date' => 'date',
             'is_finished' => 'boolean',
-            'priority' => 'int',
-            'order' => 'int',
+            'priority' => ['integer', Rule::enum(Priority::class)],
         ];
     }
 }

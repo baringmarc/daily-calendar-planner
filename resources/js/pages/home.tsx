@@ -1,176 +1,338 @@
-import AppLayout from '@/layouts/app-layout';
-import type { DayData, CalendarData, Task, UnfinishedTasks } from '@/types';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { router } from '@inertiajs/react';
 import {
-    format,
+    addDays,
     addMonths,
-    subMonths,
-    startOfMonth,
-    endOfMonth,
+    addWeeks,
     eachDayOfInterval,
-    isSameMonth,
-    isToday,
-    startOfWeek,
+    endOfMonth,
     endOfWeek,
+    format,
+    isSameMonth,
+    isWithinInterval,
+    parseISO,
     setMonth,
     setYear,
-    set,
+    startOfWeek,
+    subMonths,
+    subWeeks,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react';
-import { DayPanelContent } from '@/components/day-panel-content';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import axios from 'axios';
+import type { Day } from 'date-fns';
+import { AnimatePresence } from 'framer-motion';
+import { useMemo, useState } from 'react';
+import { AgendaView } from '@/components/agenda-view';
+import { CalendarHeader } from '@/components/calendar-header';
+import { DayView } from '@/components/day-view';
+import { KeyboardShortcutsDialog } from '@/components/keyboard-shortcuts-dialog';
+import { MonthGrid } from '@/components/month-grid';
 import { Spinner } from '@/components/ui/spinner';
 import { UnfinishedTasksDialog } from '@/components/unfinished-tasks-dialog';
+import { WeekView } from '@/components/week-view';
+import { dayKey, useCalendar } from '@/hooks/use-calendar';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import type { ShortcutHandlers } from '@/hooks/use-keyboard-shortcuts';
+import { useMoveTask } from '@/hooks/use-move-task';
+import { useToggleFinished } from '@/hooks/use-toggle-finished';
+import AppLayout from '@/layouts/app-layout';
+import { today } from '@/lib/clock';
+import { home } from '@/routes';
+import type { CalendarView } from '@/types';
 
-export default function Home() {
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-    const [calendar, setCalendar] = useState<CalendarData>({});
-    const [isLoading, setIsLoading] = useState(false);
-    const [openUnfinishedTasksDialog, setOpenUnfinishedTasksDialog] =
-        useState(false);
+type HomeProps = {
+    weekStartsOn: Day;
+    // From ?month=yyyy-MM, ?day=yyyy-MM-dd, ?view= and ?week=yyyy-MM-dd,
+    // already validated by HomeController. Null when absent (view defaults
+    // to month).
+    month: string | null;
+    day: string | null;
+    view: CalendarView;
+    week: string | null;
+};
 
-    const emptyDayData: DayData = {
-        calendar_day: {
-            id: null,
-            note: '',
+// What the URL says is on screen.
+type Location = Pick<HomeProps, 'month' | 'day' | 'view' | 'week'>;
+
+// The URL of the last day view opened from a calendar view in this tab, so
+// its back button knows the calendar is the history entry behind it. In
+// sessionStorage because Inertia remounts the page on back/forward, and a
+// reload keeps the browser history.
+const DAY_FROM_CALENDAR_KEY = 'calendaily:day-opened-from-month';
+
+function rememberDayOpenedFromCalendar(url: string) {
+    try {
+        window.sessionStorage.setItem(DAY_FROM_CALENDAR_KEY, url);
+    } catch {
+        // Without storage the back button falls back to replacing the entry.
+    }
+}
+
+function isDayOpenedFromCalendar(): boolean {
+    try {
+        return (
+            window.sessionStorage.getItem(DAY_FROM_CALENDAR_KEY) ===
+            homeUrl(Object.fromEntries(new URLSearchParams(location.search)))
+        );
+    } catch {
+        return false;
+    }
+}
+
+const monthKeyOf = (date: Date) => format(date, 'yyyy-MM');
+
+// The page's URL, with the parameters in the alphabetical order Laravel
+// normalises them to. Inertia pushes an extra history entry on reload when
+// the server's URL doesn't match the browser's. The month view is the
+// default, so it has no `view`.
+const homeUrl = ({
+    day,
+    month,
+    view,
+    week,
+}: {
+    day?: string | null;
+    month?: string | null;
+    view?: string | null;
+    week?: string | null;
+}) =>
+    home.url({
+        query: {
+            day,
+            month,
+            view: view === 'month' ? null : view,
+            week,
         },
-        tasks: [],
+    });
+
+// The month grid shows whole weeks, so it includes a few days of the
+// months either side.
+function monthGrid(monthStart: Date, weekStartsOn: Day) {
+    return {
+        start: startOfWeek(monthStart, { weekStartsOn }),
+        end: endOfWeek(endOfMonth(monthStart), { weekStartsOn }),
     };
+}
 
-    // --- Calendar Math ---
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd);
+const isInMonthGrid = (date: Date, monthKey: string, weekStartsOn: Day) =>
+    isWithinInterval(date, monthGrid(parseISO(`${monthKey}-01`), weekStartsOn));
 
-    const calendarDays = useMemo(() => {
-        return eachDayOfInterval({ start: startDate, end: endDate });
-    }, [startDate, endDate]);
-
-    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const years = Array.from(
-        { length: 11 },
-        (_, i) => currentDate.getFullYear() - 5 + i,
+export default function Home({
+    weekStartsOn,
+    month,
+    day,
+    view,
+    week,
+}: HomeProps) {
+    // The URL is the source of truth for what's on screen (UX-07). A day
+    // outside the month's grid (a hand-edited URL) shows its own month, so
+    // its data is loaded.
+    const selectedDay = useMemo(() => (day ? parseISO(day) : null), [day]);
+    const weekStart = useMemo(
+        () => startOfWeek(week ? parseISO(week) : today(), { weekStartsOn }),
+        [week, weekStartsOn],
     );
-    const months = Array.from({ length: 12 }, (_, i) => i);
+    const weekKey = dayKey(weekStart);
+    // Every week is inside the grid of the month it starts in, so the week
+    // view reads that month's data.
+    const requestedMonth =
+        view === 'week'
+            ? monthKeyOf(weekStart)
+            : (month ?? monthKeyOf(today()));
+    const monthKey =
+        selectedDay && !isInMonthGrid(selectedDay, requestedMonth, weekStartsOn)
+            ? monthKeyOf(selectedDay)
+            : requestedMonth;
+    const monthStart = useMemo(() => parseISO(`${monthKey}-01`), [monthKey]);
 
-    const MAX_TASK_DESC_LENGTH = 23;
+    // The calendar view behind the day view (or on screen).
+    const here: Location =
+        view === 'week'
+            ? { month: null, day: null, view, week: weekKey }
+            : { month: monthKey, day: null, view, week: null };
 
-    // - handle date navigation
-    const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-    const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-    const handleMonthSelect = (val: string) => {
-        setCurrentDate(setMonth(currentDate, parseInt(val)));
+    // Pushes a history entry (or replaces the current one) without asking
+    // the server for the page again.
+    const navigate = (
+        to: Partial<Location>,
+        mode: 'push' | 'replace' = 'push',
+    ) => {
+        const next: Location = {
+            month: null,
+            day: null,
+            view: 'month',
+            week: null,
+            ...to,
+        };
+
+        return router[mode]<HomeProps>({
+            url: homeUrl(next),
+            props: (props) => ({ ...props, ...next }),
+            preserveState: true,
+            preserveScroll: true,
+        });
     };
-    const handleYearSelect = (val: string) => {
-        setCurrentDate(setYear(currentDate, parseInt(val)));
+
+    const showMonth = (date: Date, inView: CalendarView = view) =>
+        navigate({
+            month: monthKeyOf(date),
+            view: inView === 'week' ? 'month' : inView,
+        });
+
+    const showWeek = (date: Date) =>
+        navigate({
+            view: 'week',
+            week: dayKey(startOfWeek(date, { weekStartsOn })),
+        });
+
+    const openDay = (date: Date, from: Location = here) => {
+        const next = { ...from, day: dayKey(date) };
+
+        rememberDayOpenedFromCalendar(homeUrl(next));
+        navigate(next);
     };
 
-    const fetchCalendar = useCallback(async (date: Date) => {
-        setIsLoading(true);
-
-        try {
-            const res = await axios.get('/api/calendar', {
-                params: { month: format(date, 'yyyy-MM') },
-            });
-
-            setCalendar(res.data.calendarData || {});
-        } catch (error) {
-            console.log('Error fetching calendar data:', error);
-        } finally {
-            setIsLoading(false);
+    // Like the browser's back button when the calendar is the previous
+    // entry. After a deep link to a day there's nothing to go back to in
+    // the app, so the day's entry becomes its calendar view instead.
+    const backToCalendar = () => {
+        if (isDayOpenedFromCalendar()) {
+            window.history.back();
+        } else {
+            navigate(here, 'replace');
         }
-    }, []);
+    };
 
-    const todaysCalendarDayId =
-        calendar[format(new Date(), 'yyyy-MM-dd')]?.calendar_day?.id;
+    // Pages the day view to another day (FEAT-07). It replaces the history
+    // entry, so back still returns to the calendar view behind it.
+    const showDayInDayView = (date: Date) => {
+        const next: Location = { month, day: dayKey(date), view, week };
 
-    const unfinishedTasks = useMemo(() => {
-        const result: UnfinishedTasks = {};
+        if (isDayOpenedFromCalendar()) {
+            rememberDayOpenedFromCalendar(homeUrl(next));
+        }
 
-        Object.entries(calendar).forEach(([date, day]) => {
-            const unfinished = day.tasks.filter(
-                (task) =>
-                    !task.is_finished &&
-                    task.calendar_day_id !== todaysCalendarDayId,
+        navigate(next, 'replace');
+    };
+
+    const switchView = (next: CalendarView) => {
+        if (next === view) {
+            return;
+        }
+
+        if (next === 'week') {
+            // The week with today in it when it's this month, else the
+            // month's first week.
+            const now = today();
+
+            showWeek(isSameMonth(now, monthStart) ? now : monthStart);
+        } else {
+            // A week can span two months: show the one most of it is in.
+            showMonth(
+                view === 'week' ? addDays(weekStart, 3) : monthStart,
+                next,
             );
-
-            if (unfinished.length > 0) {
-                result[date] = unfinished;
-            }
-        });
-
-        return result;
-    }, [calendar]);
-
-    // - check if there are unfinished tasks from previous days
-    useEffect(() => {
-        if (Object.keys(unfinishedTasks).length > 0 && !selectedDay) {
-            setOpenUnfinishedTasksDialog(true);
-        }
-    }, [unfinishedTasks, selectedDay]);
-
-    const carryOverTasks = async (carryOverTasks: UnfinishedTasks) => {
-        try {
-            await axios.post('/api/tasks/carry-over', {
-                tasks: carryOverTasks,
-                calendar_day_id: todaysCalendarDayId,
-            });
-
-            setOpenUnfinishedTasksDialog(false);
-
-            // Refetch calendar data to reflect changes
-            fetchCalendar(currentDate);
-        } catch (error) {
-            console.log('Error carrying over tasks:', error);
         }
     };
 
-    useEffect(() => {
-        fetchCalendar(currentDate);
-    }, [currentDate, fetchCalendar]);
+    const openToday = () => {
+        const now = today();
 
-    const updateDayData = (date: Date, updater: (prev: DayData) => DayData) => {
-        const key = format(date, 'yyyy-MM-dd');
-        setCalendar((prev) => {
-            const currentData = prev[key] ?? emptyDayData;
-            return { ...prev, [key]: updater(currentData) };
-        });
+        openDay(
+            now,
+            view === 'week'
+                ? {
+                      ...here,
+                      week: dayKey(startOfWeek(now, { weekStartsOn })),
+                  }
+                : { ...here, month: monthKeyOf(now) },
+        );
     };
 
-    const selectedDayKey = selectedDay
-        ? format(selectedDay, 'yyyy-MM-dd')
-        : null;
-    const currentDayData =
-        selectedDayKey && calendar[selectedDayKey]
-            ? calendar[selectedDayKey]
-            : emptyDayData;
+    const showPrev = () =>
+        view === 'week'
+            ? showWeek(subWeeks(weekStart, 1))
+            : showMonth(subMonths(monthStart, 1));
+    const showNext = () =>
+        view === 'week'
+            ? showWeek(addWeeks(weekStart, 1))
+            : showMonth(addMonths(monthStart, 1));
+
+    // Keyboard shortcuts (FEAT-07). `n` asks the day view to open its Add
+    // Task dialog, after opening today when a calendar view is on screen.
+    const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+    const [addTaskRequested, setAddTaskRequested] = useState(false);
+    const showShortcuts = () => setIsShortcutsOpen(true);
+
+    const shortcuts: ShortcutHandlers = selectedDay
+        ? {
+              n: () => setAddTaskRequested(true),
+              t: () => showDayInDayView(today()),
+              ArrowLeft: () => showDayInDayView(addDays(selectedDay, -1)),
+              ArrowRight: () => showDayInDayView(addDays(selectedDay, 1)),
+              Escape: backToCalendar,
+              '?': showShortcuts,
+          }
+        : {
+              n: () => {
+                  setAddTaskRequested(true);
+                  openToday();
+              },
+              t: openToday,
+              ArrowLeft: showPrev,
+              ArrowRight: showNext,
+              m: () => switchView('month'),
+              w: () => switchView('week'),
+              a: () => switchView('agenda'),
+              '?': showShortcuts,
+          };
+
+    useKeyboardShortcuts(shortcuts);
+
+    const toggleFinished = useToggleFinished();
+    const moveTask = useMoveTask();
+
+    const {
+        calendar,
+        isLoading,
+        getDayData,
+        updateDayData,
+        unfinishedTasks,
+        isCarryOverOpen,
+        setIsCarryOverOpen,
+        carryOverTasks,
+        isCarryingOver,
+    } = useCalendar({
+        currentDate: monthStart,
+        // The prompt shows over any calendar view, not over a day.
+        isMonthView: selectedDay === null,
+    });
+
+    const calendarDays = useMemo(
+        () => eachDayOfInterval(monthGrid(monthStart, weekStartsOn)),
+        [monthStart, weekStartsOn],
+    );
+    const weekDays = useMemo(
+        () =>
+            eachDayOfInterval({ start: weekStart, end: addDays(weekStart, 6) }),
+        [weekStart],
+    );
 
     return (
-        <AppLayout>
+        <AppLayout fillViewport>
             <UnfinishedTasksDialog
-                open={openUnfinishedTasksDialog}
-                onOpenChange={setOpenUnfinishedTasksDialog}
+                open={isCarryOverOpen}
+                onOpenChange={setIsCarryOverOpen}
                 unfinishedTasks={unfinishedTasks}
                 carryOverTasks={carryOverTasks}
+                isCarryingOver={isCarryingOver}
+            />
+            <KeyboardShortcutsDialog
+                open={isShortcutsOpen}
+                onOpenChange={setIsShortcutsOpen}
             />
             <AnimatePresence mode="wait">
                 {!selectedDay ? (
                     <div
                         key="calendar"
-                        className="flex h-screen w-full overflow-hidden bg-background text-foreground"
+                        className="relative flex min-h-0 w-full flex-1 overflow-hidden bg-background text-foreground"
                     >
                         {isLoading && (
                             <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60">
@@ -178,287 +340,63 @@ export default function Home() {
                             </div>
                         )}
 
-                        {/* CALENDAR VIEW */}
                         <div className="flex flex-1 flex-col">
-                            {/* Header */}
-                            <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-1 rounded-md bg-muted p-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground"
-                                            onClick={handlePrevMonth}
-                                        >
-                                            <ChevronLeft className="h-5 w-5" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground"
-                                            onClick={handleNextMonth}
-                                        >
-                                            <ChevronRight className="h-5 w-5" />
-                                        </Button>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        className="h-10"
-                                        onClick={() => {
-                                            setCurrentDate(new Date());
-                                            setSelectedDay(new Date());
-                                        }}
-                                    >
-                                        Today
-                                    </Button>
-                                </div>
+                            <CalendarHeader
+                                view={view}
+                                onViewChange={switchView}
+                                currentDate={monthStart}
+                                weekStart={weekStart}
+                                onPrev={showPrev}
+                                onNext={showNext}
+                                onToday={openToday}
+                                onShowShortcuts={showShortcuts}
+                                onMonthSelect={(m) =>
+                                    showMonth(setMonth(monthStart, m))
+                                }
+                                onYearSelect={(year) =>
+                                    showMonth(setYear(monthStart, year))
+                                }
+                            />
 
-                                <div className="flex items-center gap-3">
-                                    <Select
-                                        value={currentDate
-                                            .getMonth()
-                                            .toString()}
-                                        onValueChange={handleMonthSelect}
-                                    >
-                                        <SelectTrigger className="h-10 w-[140px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 focus:ring-0">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {months.map((m) => (
-                                                <SelectItem
-                                                    key={m}
-                                                    value={m.toString()}
-                                                >
-                                                    {format(
-                                                        setMonth(new Date(), m),
-                                                        'MMMM',
-                                                    )}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-
-                                    <Select
-                                        value={currentDate
-                                            .getFullYear()
-                                            .toString()}
-                                        onValueChange={handleYearSelect}
-                                    >
-                                        <SelectTrigger className="h-10 w-[100px] border-none bg-transparent text-base font-medium transition-colors hover:bg-muted/50 focus:ring-0">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {years.map((y) => (
-                                                <SelectItem
-                                                    key={y}
-                                                    value={y.toString()}
-                                                >
-                                                    {y}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </header>
-
-                            {/* Calendar Grid */}
-                            <div className="flex flex-1 flex-col overflow-hidden bg-muted/10">
-                                {/* Weekday headers */}
-                                <div className="grid shrink-0 grid-cols-7 border-b border-border bg-card">
-                                    {weekDays.map((day) => (
-                                        <div
-                                            key={day}
-                                            className="py-3 text-center text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-                                        >
-                                            {day}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Days Grid */}
-                                <div className="grid flex-1 grid-cols-7 grid-rows-5 overflow-y-auto">
-                                    {calendarDays.map((day, i) => {
-                                        const dayKey = format(
-                                            day,
-                                            'yyyy-MM-dd',
-                                        );
-                                        const data = calendar[dayKey];
-
-                                        const tasks = data?.tasks || [];
-
-                                        const hasNotes =
-                                            !!data?.calendar_day.note;
-                                        const hasTasks = tasks.length > 0;
-                                        const totaltasks = tasks.length || 0;
-                                        const donetasks =
-                                            tasks.filter((t) => t.is_finished)
-                                                .length || 0;
-                                        const isSelected =
-                                            selectedDay &&
-                                            format(
-                                                selectedDay,
-                                                'yyyy-MM-dd',
-                                            ) === dayKey;
-                                        const isCurrentMonth = isSameMonth(
-                                            day,
-                                            monthStart,
-                                        );
-
-                                        const finishedAllTasks =
-                                            totaltasks > 0 &&
-                                            donetasks === totaltasks;
-
-                                        return (
-                                            <div
-                                                key={day.toString()}
-                                                onClick={() =>
-                                                    setSelectedDay(day)
-                                                }
-                                                className={cn(
-                                                    'group relative cursor-pointer border-r border-b border-border p-2 transition-all hover:bg-card/80',
-                                                    !isCurrentMonth &&
-                                                        'bg-muted/30 text-muted-foreground',
-                                                    isCurrentMonth && 'bg-card',
-                                                    isSelected &&
-                                                        'z-10 bg-accent/5 ring-2 ring-accent ring-inset',
-                                                )}
-                                            >
-                                                <div className="flex items-start justify-between">
-                                                    <span
-                                                        className={cn(
-                                                            'flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium transition-colors',
-                                                            isToday(day)
-                                                                ? 'bg-accent text-accent-foreground'
-                                                                : 'group-hover:bg-muted',
-                                                        )}
-                                                    >
-                                                        {format(day, 'd')}
-                                                    </span>
-
-                                                    {hasTasks && (
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-accent opacity-90">
-                                                                <CheckSquare className="h-3 w-3" />
-                                                                <span>
-                                                                    {donetasks}/
-                                                                    {totaltasks}
-                                                                </span>
-                                                            </div>
-                                                            <Progress
-                                                                value={
-                                                                    totaltasks ===
-                                                                    0
-                                                                        ? 0
-                                                                        : (donetasks /
-                                                                              totaltasks) *
-                                                                          100
-                                                                }
-                                                                className="h-1.5 rounded-full bg-accent/20 [&>div]:bg-accent"
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="mt-2.5 flex w-full flex-col space-y-2 px-1">
-                                                    {hasTasks &&
-                                                        tasks
-                                                            .slice(0, 3)
-                                                            .map(
-                                                                (
-                                                                    task: Task,
-                                                                ) => (
-                                                                    <div
-                                                                        key={
-                                                                            task.id
-                                                                        }
-                                                                        className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground"
-                                                                    >
-                                                                        {task.is_finished ? (
-                                                                            <CheckSquare className="h-3 w-3 shrink-0" />
-                                                                        ) : (
-                                                                            <Square className="h-3 w-3 shrink-0 text-muted-foreground" />
-                                                                        )}
-                                                                        <span className="truncate opacity-80">
-                                                                            {task
-                                                                                .description
-                                                                                .length >
-                                                                            MAX_TASK_DESC_LENGTH
-                                                                                ? `${task.description.slice(0, MAX_TASK_DESC_LENGTH)}...`
-                                                                                : task.description}
-                                                                        </span>
-                                                                    </div>
-                                                                ),
-                                                            )}
-
-                                                    {/* {hasNotes && (
-                                                        <div className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground">
-                                                            <AlignLeft className="h-3 w-3 shrink-0" />
-                                                            <span className="truncate opacity-80">
-                                                                {data.notes}
-                                                            </span>
-                                                        </div>
-                                                    )} */}
-
-                                                    {!hasTasks &&
-                                                        !hasNotes &&
-                                                        !isCurrentMonth && (
-                                                            <div className="text-[11px] text-muted-foreground opacity-50">
-                                                                -
-                                                            </div>
-                                                        )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                            {view === 'week' ? (
+                                <WeekView
+                                    days={weekDays}
+                                    calendar={calendar}
+                                    onSelectDay={(date) => openDay(date)}
+                                    onToggleFinished={toggleFinished}
+                                    onMoveTask={moveTask}
+                                />
+                            ) : view === 'agenda' ? (
+                                <AgendaView
+                                    monthStart={monthStart}
+                                    calendar={calendar}
+                                    onSelectDay={(date) => openDay(date)}
+                                    onToggleFinished={toggleFinished}
+                                />
+                            ) : (
+                                <MonthGrid
+                                    days={calendarDays}
+                                    monthStart={monthStart}
+                                    calendar={calendar}
+                                    onSelectDay={(date) => openDay(date)}
+                                />
+                            )}
                         </div>
                     </div>
                 ) : (
-                    // - individual day view
-                    <motion.div
+                    <DayView
                         key="day-view"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground"
-                    >
-                        {/* Day View Header */}
-                        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6">
-                            <div className="flex items-center gap-4">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-10 w-10"
-                                    onClick={() => setSelectedDay(null)}
-                                >
-                                    <ChevronLeft className="h-5 w-5" />
-                                </Button>
-                                <div>
-                                    <h1 className="text-2xl font-bold tracking-tight">
-                                        {format(selectedDay, 'EEEE')}
-                                    </h1>
-                                    <p className="text-sm text-muted-foreground">
-                                        {format(selectedDay, 'MMMM d, yyyy')}
-                                    </p>
-                                </div>
-                            </div>
-                        </header>
-
-                        {/* Day View Content */}
-                        <div className="flex-1 overflow-y-auto p-8">
-                            <div className="mx-auto max-w-2xl">
-                                <DayPanelContent
-                                    date={selectedDay}
-                                    dayData={currentDayData}
-                                    updateData={(updater) =>
-                                        updateDayData(selectedDay, updater)
-                                    }
-                                />
-                            </div>
-                        </div>
-                    </motion.div>
+                        date={selectedDay}
+                        dayData={getDayData(selectedDay)}
+                        updateData={(updater) =>
+                            updateDayData(selectedDay, updater)
+                        }
+                        onBack={backToCalendar}
+                        addTaskRequested={addTaskRequested}
+                        onAddTaskRequestHandled={() =>
+                            setAddTaskRequested(false)
+                        }
+                    />
                 )}
             </AnimatePresence>
         </AppLayout>

@@ -2,58 +2,35 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CarryOverTasksRequest;
+use App\Http\Requests\MoveTaskRequest;
+use App\Http\Requests\ReorderTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
+use App\Http\Requests\UpdateTaskSeriesRequest;
+use App\Http\Resources\TaskResource;
 use App\Models\Task;
+use App\Services\RecurringTaskService;
 use App\Services\TaskService;
+use App\Support\UserClock;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class TaskController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+    public function __construct(private TaskService $taskService) {}
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(StoreTaskRequest $request)
     {
-        $taskService = new TaskService();
-        
         $data = $request->validated();
-        $data['user_id'] = auth()->id();
+        $data['user_id'] = $request->user()->id;
 
-        $task = $taskService->create($data);
+        $task = $this->taskService->create($data);
 
-        return response()->json($task, 201);
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Task $task)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Task $task)
-    {
-        //
+        return (new TaskResource($task))->response()->setStatusCode(201);
     }
 
     /**
@@ -61,9 +38,11 @@ class TaskController extends Controller
      */
     public function update(UpdateTaskRequest $request, Task $task)
     {
+        Gate::authorize('update', $task);
+
         $task->update($request->validated());
 
-        return response()->json($task, 200);
+        return new TaskResource($task);
     }
 
     /**
@@ -71,44 +50,81 @@ class TaskController extends Controller
      */
     public function destroy(Task $task)
     {
+        Gate::authorize('delete', $task);
+
         $task->delete();
+
         return response()->json(['message' => 'Task deleted successfully'], 200);
     }
 
-    // - carry over tasks from previous days
-    public function carryOverTasks(UpdateTaskRequest $request)
+    /**
+     * Move a task to the end of another day's list.
+     */
+    public function move(MoveTaskRequest $request, Task $task)
     {
-        $taskService = new TaskService();
-        
-        if (!$request->has('tasks') || !is_array($request->input('tasks'))) {
-            return response()->json(['message' => 'Invalid tasks data'], 400);
-        }
+        Gate::authorize('update', $task);
 
-        $tasks = $request->input('tasks');
-        $updatedTasks = [];
-        $todayCalendarDayId = $request->input('calendar_day_id') ?? null;
+        $task = $this->taskService->moveTask($request->user(), $task, $request->validated('date'));
 
-        foreach($tasks as $day) {
-            foreach($day as $task) {
-                $taskIds[] = $task['id'];
-            }
-        }
-
-        $updatedTasks = $taskService->carryOverTasks($taskIds, $todayCalendarDayId);
-
-        return response()->json($updatedTasks, 200);
+        return new TaskResource($task);
     }
 
-    public function reorder(UpdateTaskRequest $request) {
-        $taskService = new TaskService();
+    /**
+     * Save a task together with its repeat rule: change the rule and the
+     * occurrences after this task, start repeating, or stop (FEAT-09).
+     */
+    public function updateSeries(UpdateTaskSeriesRequest $request, Task $task, RecurringTaskService $recurringTasks)
+    {
+        Gate::authorize('update', $task);
 
-        if (!$request->has('tasks') || !is_array($request->input('tasks'))) {
-            return response()->json(['message' => 'Invalid tasks data'], 400);
-        }
+        $task = $recurringTasks->updateSeries(
+            $request->user(),
+            $task,
+            $request->validated(),
+            UserClock::today($request)->toDateString(),
+        );
 
-        $tasks = $request->input('tasks');
-        $updatedTasks = $taskService->reorderTasks($tasks);
+        return new TaskResource($task);
+    }
 
-        return response()->json($updatedTasks, 200);
+    /**
+     * Unfinished tasks from days before today, grouped by date (oldest first).
+     */
+    public function unfinished(Request $request)
+    {
+        $tasks = $this->taskService->unfinishedTasksBefore(
+            $request->user(),
+            UserClock::today($request)->toDateString(),
+        );
+
+        $grouped = $tasks->groupBy('date')->map(fn ($tasks) => TaskResource::collection($tasks->values()));
+
+        return response()->json([
+            'unfinishedTasks' => (object) $grouped->all(),
+        ]);
+    }
+
+    /**
+     * Move unfinished tasks from earlier days to today.
+     */
+    public function carryOverTasks(CarryOverTasksRequest $request)
+    {
+        $movedTasks = $this->taskService->carryOverTasks(
+            $request->user(),
+            $request->validated('task_ids'),
+            UserClock::today($request)->toDateString(),
+        );
+
+        return TaskResource::collection($movedTasks);
+    }
+
+    /**
+     * Rewrite the order of one day's tasks.
+     */
+    public function reorder(ReorderTasksRequest $request)
+    {
+        $this->taskService->reorderTasks($request->user(), $request->taskIds());
+
+        return response()->json(['message' => 'Tasks reordered successfully'], 200);
     }
 }

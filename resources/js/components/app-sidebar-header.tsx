@@ -1,8 +1,8 @@
+import { Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
-import { Sun, Moon } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { Button } from './ui/button';
 
 export function AppSidebarHeader({
@@ -27,6 +27,9 @@ export function AppSidebarHeader({
                     size="icon"
                     className="h-10 w-10"
                     onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                    aria-label={
+                        isDark ? 'Switch to light mode' : 'Switch to dark mode'
+                    }
                 >
                     {isDark ? (
                         <Sun className="size-4" />

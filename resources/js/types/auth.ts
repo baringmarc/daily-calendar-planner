@@ -5,6 +5,10 @@ export type User = {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
+    // Calendar settings (FEAT-01). A null zone hasn't been detected yet, and
+    // a null week start means the app default (the `weekStartsOn` prop).
+    timezone: string | null;
+    week_starts_on: number | null;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;

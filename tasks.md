@@ -18,7 +18,7 @@ This is every known bug, cleanup and feature idea from the 2026-11-21 project re
 | 4 | UX polish | UX-01 – UX-12 |
 | 5 | Feature backlog (to discuss) | FEAT-01 – FEAT-19 |
 
-Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-02, FEAT-09 and FEAT-10): `composer run ci:check` passes, with **155 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
+Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-01, FEAT-02, FEAT-05, FEAT-07, FEAT-09 and FEAT-10): `composer run ci:check` passes, with **169 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
 
 ---
 
@@ -210,7 +210,7 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-02, FEAT-09 an
 **Next up (spec decision D4):** FEAT-02, FEAT-09 and FEAT-10, once phases 0–4 are done. Then FEAT-05, FEAT-07 and FEAT-01 (chosen 2026-11-22). The rest aren't prioritised yet. Before starting any feature, add acceptance criteria to it.
 
 ### Small to medium
-- [ ] **FEAT-01: User settings for time zone and week start** · `M` · ⭐ next up. Detect the time zone on first login and store it on the user. Add a week-start setting under Settings (default Monday), used by both the API and the grid. This is the long-term fix for BUG-02 and BUG-04.
+- [x] **FEAT-01: User settings for time zone and week start** · `M` · ⭐ next up. Detect the time zone on first login and store it on the user. Add a week-start setting under Settings (default Monday), used by both the API and the grid. This is the long-term fix for BUG-02 and BUG-04.
   - Done when:
     - Users have a nullable `timezone` and a nullable `week_starts_on` (0 = Sunday … 6 = Saturday). An empty week start means the app default (`config/calendar.php`, Monday).
     - The first signed-in request that carries a valid `X-Timezone` header (signing in, registering, or the next request of an existing session) stores that zone on a user who has none. A stored zone is never overwritten this way, and an invalid header is never stored.
@@ -226,7 +226,7 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-02, FEAT-09 an
     - In the week view (FEAT-10), a task can be dragged onto another day.
 - [ ] **FEAT-03: Natural-language quick add** · `M`. e.g. "Call Bob tomorrow !high" parses the date and priority.
 - [ ] **FEAT-04: Optional time and duration on tasks** · `M`. Optional due time or time block, with "all day" as the default. This conflicts with a spec non-goal, so it needs a scope decision.
-- [ ] **FEAT-05: Sort, filter and hide completed** · `S` · ⭐ next up. Sort by priority or status in the day view, and a "hide completed" toggle.
+- [x] **FEAT-05: Sort, filter and hide completed** · `S` · ⭐ next up. Sort by priority or status in the day view, and a "hide completed" toggle.
   - Done when:
     - The day view's task list has a view menu with a sort ("My order", the default, which is the drag order; "Priority", Urgent first; "Status", unfinished first) and a "Hide completed" toggle. Ties keep "My order".
     - The choice applies to every day, and is remembered in this browser (not on the server).
@@ -234,7 +234,7 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-02, FEAT-09 an
     - Tasks can only be dragged to reorder in "My order". With completed tasks hidden, the visible tasks are reordered among themselves and the hidden ones keep their places.
     - It works by keyboard and on touch, and nothing changes on the server.
 - [ ] **FEAT-06: Search** · `M`. Search across all tasks and notes, and jump to the day.
-- [ ] **FEAT-07: Keyboard shortcuts** · `S` · ⭐ next up. `n` new task, `t` today, `←/→` month or day, `Esc` back to the month view, `?` help.
+- [x] **FEAT-07: Keyboard shortcuts** · `S` · ⭐ next up. `n` new task, `t` today, `←/→` month or day, `Esc` back to the month view, `?` help.
   - Done when:
     - `n` opens the Add Task dialog: for the open day in the day view, or for today in a calendar view.
     - `t` opens today. `←`/`→` page the month (month and agenda views), the week (week view) or the day (day view). `m`, `w` and `a` switch to the Month, Week and Agenda views.

@@ -39,5 +39,25 @@ export type UnfinishedTasks = Record<string, Task[]>;
 // `GET /api/calendar`, keyed by Y-m-d date.
 export type CalendarData = Record<string, DayData>;
 
+// `GET /api/search` (FEAT-06). Mirrors SearchController. A day comes with
+// only its matching tasks, and its note only when the note matches.
+export type SearchDay = {
+    date: string;
+    note: string | null;
+    tasks: Task[];
+};
+
+export type SearchGroup = {
+    days: SearchDay[];
+    // More days matched than the group lists.
+    has_more: boolean;
+};
+
+// Today and later days soonest first, earlier days most recent first.
+export type SearchResults = {
+    upcoming: SearchGroup;
+    earlier: SearchGroup;
+};
+
 // The calendar's views (FEAT-10), from ?view= in the URL.
 export type CalendarView = 'month' | 'week' | 'agenda';

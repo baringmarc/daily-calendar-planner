@@ -1,5 +1,11 @@
 import { addDays, format, isSameMonth, isSameYear, setMonth } from 'date-fns';
-import { ChevronLeft, ChevronRight, Keyboard, Plus } from 'lucide-react';
+import {
+    ChevronLeft,
+    ChevronRight,
+    Keyboard,
+    Plus,
+    Search,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -62,6 +68,7 @@ export function CalendarHeader({
     onNext,
     onToday,
     onQuickAdd,
+    onSearch,
     onShowShortcuts,
     onMonthSelect,
     onYearSelect,
@@ -78,6 +85,8 @@ export function CalendarHeader({
     onToday: () => void;
     // Opens the Quick add dialog (FEAT-03).
     onQuickAdd: () => void;
+    // Opens the search dialog (FEAT-06).
+    onSearch: () => void;
     // Opens the keyboard shortcuts dialog (FEAT-07).
     onShowShortcuts: () => void;
     onMonthSelect: (month: number) => void;
@@ -121,6 +130,16 @@ export function CalendarHeader({
                 >
                     <Plus className="h-5 w-5" />
                     <span className="hidden sm:inline">Quick add</span>
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 text-muted-foreground"
+                    onClick={onSearch}
+                    aria-label="Search"
+                    title="Search tasks and notes (/)"
+                >
+                    <Search className="h-5 w-5" />
                 </Button>
                 {/* Touch screens have no keyboard to use them with. */}
                 <Button

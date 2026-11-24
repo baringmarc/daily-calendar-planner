@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 // (letters lower-cased).
 export type ShortcutKey =
     | 'n'
+    | 'q'
     | 't'
     | 'm'
     | 'w'
@@ -18,6 +19,7 @@ export type ShortcutHandlers = Partial<Record<ShortcutKey, () => void>>;
 // What the help dialog lists, in order.
 export const SHORTCUTS: { keys: string[]; description: string }[] = [
     { keys: ['N'], description: 'New task (for today in a calendar view)' },
+    { keys: ['Q'], description: 'Quick add, like “Call Bob tomorrow !high”' },
     { keys: ['T'], description: 'Open today' },
     { keys: ['←', '→'], description: 'Previous or next month, week or day' },
     { keys: ['M', 'W', 'A'], description: 'Month, week or agenda view' },

@@ -1,5 +1,5 @@
 import { addDays, format, isSameMonth, isSameYear, setMonth } from 'date-fns';
-import { ChevronLeft, ChevronRight, Keyboard } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Keyboard, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -61,6 +61,7 @@ export function CalendarHeader({
     onPrev,
     onNext,
     onToday,
+    onQuickAdd,
     onShowShortcuts,
     onMonthSelect,
     onYearSelect,
@@ -75,6 +76,8 @@ export function CalendarHeader({
     onPrev: () => void;
     onNext: () => void;
     onToday: () => void;
+    // Opens the Quick add dialog (FEAT-03).
+    onQuickAdd: () => void;
     // Opens the keyboard shortcuts dialog (FEAT-07).
     onShowShortcuts: () => void;
     onMonthSelect: (month: number) => void;
@@ -108,6 +111,16 @@ export function CalendarHeader({
                 </div>
                 <Button variant="outline" className="h-10" onClick={onToday}>
                     Today
+                </Button>
+                <Button
+                    variant="outline"
+                    className="h-10 px-3"
+                    onClick={onQuickAdd}
+                    aria-label="Quick add"
+                    title="Quick add (Q)"
+                >
+                    <Plus className="h-5 w-5" />
+                    <span className="hidden sm:inline">Quick add</span>
                 </Button>
                 {/* Touch screens have no keyboard to use them with. */}
                 <Button

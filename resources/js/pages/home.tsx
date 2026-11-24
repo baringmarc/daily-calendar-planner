@@ -24,6 +24,7 @@ import { CalendarHeader } from '@/components/calendar-header';
 import { DayView } from '@/components/day-view';
 import { KeyboardShortcutsDialog } from '@/components/keyboard-shortcuts-dialog';
 import { MonthGrid } from '@/components/month-grid';
+import { QuickAddDialog } from '@/components/quick-add-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { UnfinishedTasksDialog } from '@/components/unfinished-tasks-dialog';
 import { WeekView } from '@/components/week-view';
@@ -261,9 +262,17 @@ export default function Home({
     const [addTaskRequested, setAddTaskRequested] = useState(false);
     const showShortcuts = () => setIsShortcutsOpen(true);
 
+    // Quick add (FEAT-03). A task without a date in its text goes on the
+    // open day, or on today in a calendar view.
+    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+    const showQuickAdd = () => setIsQuickAddOpen(true);
+    const openAddedDay = (date: Date) =>
+        selectedDay ? showDayInDayView(date) : openDay(date);
+
     const shortcuts: ShortcutHandlers = selectedDay
         ? {
               n: () => setAddTaskRequested(true),
+              q: showQuickAdd,
               t: () => showDayInDayView(today()),
               ArrowLeft: () => showDayInDayView(addDays(selectedDay, -1)),
               ArrowRight: () => showDayInDayView(addDays(selectedDay, 1)),
@@ -275,6 +284,7 @@ export default function Home({
                   setAddTaskRequested(true);
                   openToday();
               },
+              q: showQuickAdd,
               t: openToday,
               ArrowLeft: showPrev,
               ArrowRight: showNext,
@@ -328,6 +338,12 @@ export default function Home({
                 open={isShortcutsOpen}
                 onOpenChange={setIsShortcutsOpen}
             />
+            <QuickAddDialog
+                open={isQuickAddOpen}
+                onOpenChange={setIsQuickAddOpen}
+                defaultDate={selectedDay ?? today()}
+                onOpenDay={openAddedDay}
+            />
             <AnimatePresence mode="wait">
                 {!selectedDay ? (
                     <div
@@ -349,6 +365,7 @@ export default function Home({
                                 onPrev={showPrev}
                                 onNext={showNext}
                                 onToday={openToday}
+                                onQuickAdd={showQuickAdd}
                                 onShowShortcuts={showShortcuts}
                                 onMonthSelect={(m) =>
                                     showMonth(setMonth(monthStart, m))

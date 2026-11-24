@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Task routes
     Route::get('/api/tasks/unfinished', [TaskController::class, 'unfinished'])->name('tasks.unfinished');
+    Route::get('/api/tasks/parse', [TaskController::class, 'parse'])->name('tasks.parse');
     Route::post('/api/tasks/carry-over', [TaskController::class, 'carryOverTasks'])->name('tasks.carry-over');
     Route::put('/api/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
     Route::put('/api/tasks/{task}/move', [TaskController::class, 'move'])->name('tasks.move');

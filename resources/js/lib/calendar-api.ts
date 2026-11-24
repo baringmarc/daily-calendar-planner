@@ -19,6 +19,7 @@ export const queryKeys = {
     calendar: ['calendar'] as const,
     calendarMonth: (month: string) => ['calendar', month] as const,
     unfinishedTasks: ['tasks', 'unfinished'] as const,
+    parsedTask: (text: string) => ['tasks', 'parse', text] as const,
 };
 
 // --- Queries ---
@@ -36,6 +37,22 @@ export async function fetchUnfinishedTasks(): Promise<UnfinishedTasks> {
     const res = await axios.get(TaskController.unfinished.url());
 
     return res.data.unfinishedTasks ?? {};
+}
+
+/**
+ * A quick-add line read on the server (FEAT-03): the description without
+ * the date and priority words, and those, or null when there are none.
+ */
+export type ParsedTask = {
+    description: string;
+    date: string | null;
+    priority: Priority | null;
+};
+
+export async function parseTask(text: string): Promise<ParsedTask> {
+    const res = await axios.get(TaskController.parse.url({ query: { text } }));
+
+    return res.data;
 }
 
 // --- Mutations ---

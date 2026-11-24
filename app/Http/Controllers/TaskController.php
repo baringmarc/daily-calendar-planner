@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CarryOverTasksRequest;
 use App\Http\Requests\MoveTaskRequest;
+use App\Http\Requests\ParseTaskRequest;
 use App\Http\Requests\ReorderTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -12,7 +13,9 @@ use App\Http\Resources\TaskResource;
 use App\Models\Task;
 use App\Services\RecurringTaskService;
 use App\Services\TaskService;
+use App\Support\QuickAddParser;
 use App\Support\UserClock;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -85,6 +88,19 @@ class TaskController extends Controller
         );
 
         return new TaskResource($task);
+    }
+
+    /**
+     * Read the date and priority out of a quick-add line (FEAT-03). Nothing
+     * is saved: the frontend adds the task with `store`.
+     */
+    public function parse(ParseTaskRequest $request, QuickAddParser $parser): JsonResponse
+    {
+        return response()->json($parser->parse(
+            $request->validated('text'),
+            UserClock::today($request),
+            $request->user()->weekStartsOn(),
+        ));
     }
 
     /**

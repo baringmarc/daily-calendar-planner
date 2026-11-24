@@ -1,6 +1,8 @@
 import { Link } from '@inertiajs/react';
+import { BarChart3, CalendarDays } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
+import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
@@ -11,8 +13,14 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { home } from '@/routes';
+import { home, stats } from '@/routes';
 import type { NavItem } from '@/types';
+
+const mainNavItems: NavItem[] = [
+    { title: 'Calendar', href: home(), icon: CalendarDays },
+    // FEAT-14
+    { title: 'Stats', href: stats(), icon: BarChart3 },
+];
 
 const footerNavItems: NavItem[] = [];
 
@@ -31,7 +39,9 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
 
-            <SidebarContent />
+            <SidebarContent>
+                <NavMain items={mainNavItems} />
+            </SidebarContent>
 
             <SidebarFooter>
                 <NavFooter items={footerNavItems} className="mt-auto" />

@@ -195,6 +195,15 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | FR-S2 | Results are grouped by day: today and later first (soonest first), then earlier days (most recent first), at most 25 days each, with a line saying when more match ([decision D10](#9-decisions-and-open-questions)). A day shows its matching tasks (priority, struck through when finished) and the part of its note around the match, if the note matches, with the matched text highlighted. | ✅ |
 | FR-S3 | Choosing a day opens it over the calendar view the search was opened from, or pages the open day view to it. `↓` moves from the field to the results, `↑`/`↓` between them, and Enter opens one (Enter in the field opens the first). Nothing found says so. | ✅ |
 
+### 4.8 Stats
+
+| ID | Requirement | Status |
+|---|---|---|
+| FR-ST1 | A Stats page (`/stats`, linked from the sidebar) shows the current and longest streak, and how many of today's, this week's and this month's tasks are done. Only days up to the user's today count, and weeks start on the user's week start. | ✅ |
+| FR-ST2 | A streak counts days in a row with at least one finished task ([decision D11](#9-decisions-and-open-questions)). Today doesn't end it while it can still be finished, so the current streak runs back from today, or from yesterday. The longest streak is the longest run ever. | ✅ |
+| FR-ST3 | A chart shows the completion rate (finished out of all tasks) of each of the last 12 weeks or months, switchable, with the numbers also given as text. | ✅ |
+| FR-ST4 | A heatmap shows the last year, a column per week and a cell per day, shaded by completion: no tasks, none done (outlined), under half, half or more, all done, with a legend naming each. Every cell is labelled ("Tue, Nov 24, 2026: 3 of 4 done") and opens that day. On phones it scrolls sideways, starting at the latest week. | ✅ |
+
 ## 5. Data model
 
 ### 5.1 Current schema
@@ -329,6 +338,7 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 
 ## 7. Frontend architecture
 
+- **Stats** (`/stats`, FEAT-14) is a separate Inertia page whose `stats` prop comes straight from `StatsService` (one grouped query of task counts per day, then streaks, periods and the heatmap in PHP). It isn't part of the cached calendar data, so it's always fresh when opened.
 - **Single page.** `HomeController@index` renders the `home` Inertia page with the props `weekStartsOn`, `month`, `day`, `view` and `week` (from the query string: null when absent or invalid, and `view` falls back to `month`). After that, all data goes through the JSON API above.
 - [resources/js/pages/home.tsx](resources/js/pages/home.tsx) reads the view, the visible month or week and the selected day from the URL props, changes them with Inertia's client-side `router.push`/`replace`, and shows `CalendarHeader` over the month grid (`MonthGrid` of `DayCell`s), `WeekView` or `AgendaView`, or the `DayView`. Every view reads the month's cached query: a week is always inside the grid of the month it starts in.
 - **Data layer: TanStack Query** ([decision D5](#9-decisions-and-open-questions)). [resources/js/lib/calendar-api.ts](resources/js/lib/calendar-api.ts) holds the query keys and one axios function per endpoint. Each month's `CalendarData` is its own query (`['calendar', 'yyyy-MM']`), cached and refetched in the background when shown again or when the window regains focus.

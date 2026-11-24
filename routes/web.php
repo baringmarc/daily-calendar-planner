@@ -3,6 +3,7 @@
 use App\Http\Controllers\CalendarDayController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\StatsController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,6 +13,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Calendar data API
     Route::get('/api/calendar', [HomeController::class, 'calendar'])->name('api.calendar');
     Route::get('/api/search', SearchController::class)->name('api.search');
+
+    Route::get('/stats', [StatsController::class, 'index'])->name('stats');
 
     Route::resource('calendar-days', CalendarDayController::class)
         ->only(['store', 'update']);

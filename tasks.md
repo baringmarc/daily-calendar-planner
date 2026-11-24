@@ -18,7 +18,7 @@ This is every known bug, cleanup and feature idea from the 2026-11-21 project re
 | 4 | UX polish | UX-01 – UX-12 |
 | 5 | Feature backlog (to discuss) | FEAT-01 – FEAT-19 |
 
-Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-01, FEAT-02, FEAT-05, FEAT-07, FEAT-09 and FEAT-10): `composer run ci:check` passes, with **169 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
+Current CI state (checked 2026-11-25, after Phases 0–4 and FEAT-01, FEAT-02, FEAT-03, FEAT-05, FEAT-06, FEAT-07, FEAT-09, FEAT-10 and FEAT-14): `composer run ci:check` passes, with **238 PHPUnit tests**, a clean `tsc --noEmit`, and no ESLint, Prettier or Pint errors.
 
 ---
 
@@ -224,7 +224,7 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-01, FEAT-02, F
     - Each task in the day view has a "Move" menu with "Today" (unless it is already on today), "Tomorrow" (unless it is already on tomorrow) and "Pick a date…", which opens a date input. All of them work by keyboard and on touch.
     - After a move, the task leaves the day it was on straight away, a toast says where it went ("Moved to Tue, Nov 24"), and the target day shows it in every view.
     - In the week view (FEAT-10), a task can be dragged onto another day.
-- [ ] **FEAT-03: Natural-language quick add** · `M` · ⭐ next up. e.g. "Call Bob tomorrow !high" parses the date and priority.
+- [x] **FEAT-03: Natural-language quick add** · `M` · ⭐ next up. e.g. "Call Bob tomorrow !high" parses the date and priority.
   - Done when:
     - A "Quick add" button in the calendar header, and `q` in any view, open a one-line Quick add dialog. Without a date in the text, the task goes on the open day in the day view, and on today elsewhere.
     - The text is parsed on the server (`GET /api/tasks/parse?text=`, spec decision D9) into a description, an optional date and an optional priority. The dialog previews them as you type ("Wed, Nov 26 · High"), and adding sends the parsed task to `POST /tasks`, so creating and validating a task is unchanged.
@@ -240,7 +240,7 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-01, FEAT-02, F
     - Hidden finished tasks are counted under the list ("2 completed hidden · Show"). If every task is finished and hidden, the list says so instead of showing the empty-day state. The progress bar always counts every task.
     - Tasks can only be dragged to reorder in "My order". With completed tasks hidden, the visible tasks are reordered among themselves and the hidden ones keep their places.
     - It works by keyboard and on touch, and nothing changes on the server.
-- [ ] **FEAT-06: Search** · `M` · ⭐ next up. Search across all tasks and notes, and jump to the day.
+- [x] **FEAT-06: Search** · `M` · ⭐ next up. Search across all tasks and notes, and jump to the day.
   - Done when:
     - A search button in the calendar header, and `/` in any view, open a search dialog. Typing at least 2 characters searches the user's task descriptions and day notes (`GET /api/search?q=`), shortly after typing stops. Case doesn't matter, and `%` and `_` match themselves.
     - Results are grouped by day: today and later days first, soonest first, then earlier days, most recent first (spec decision D10), at most 25 days of each. When there are more, the list says so. Each day shows its date, its matching tasks (with priority, and struck through when finished) and, when the note matches, the part of the note around the match. The matched text is highlighted.
@@ -274,7 +274,7 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-01, FEAT-02, F
 - [ ] **FEAT-11: Subtasks / checklists** · `M`
 - [ ] **FEAT-12: Tags, labels or projects with colours** · `M`
 - [ ] **FEAT-13: Rich-text or markdown notes, and a daily journal template** · `M`
-- [ ] **FEAT-14: Stats and streaks** · `M` · ⭐ next up. Completion rate per day, week or month, a streak counter, and a heatmap.
+- [x] **FEAT-14: Stats and streaks** · `M` · ⭐ next up. Completion rate per day, week or month, a streak counter, and a heatmap.
   - Done when:
     - A Stats page (`/stats`), linked from the sidebar, shows the current and longest streak, how many of today's, this week's and this month's tasks are done, a heatmap of the last year, and the completion rate of each of the last 12 weeks or months (switchable).
     - Only days up to today count (the user's "today", `UserClock`). A day's completion is its finished tasks out of all its tasks.

@@ -1,6 +1,6 @@
 # Calendaily: Tasks
 
-_Last updated: 2026-11-22_ · Behaviour is defined in [spec.md](spec.md).
+_Last updated: 2026-11-25_ · Behaviour is defined in [spec.md](spec.md).
 
 This is every known bug, cleanup and feature idea from the 2026-11-21 project review, grouped into phases in the order we plan to tackle them. Tick a box when its task is merged into `develop`.
 
@@ -207,7 +207,7 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-01, FEAT-02, F
 
 ## Phase 5: Feature backlog (to discuss)
 
-**Next up (spec decision D4):** FEAT-02, FEAT-09 and FEAT-10, once phases 0–4 are done. Then FEAT-05, FEAT-07 and FEAT-01 (chosen 2026-11-22). The rest aren't prioritised yet. Before starting any feature, add acceptance criteria to it.
+**Next up (spec decision D4):** FEAT-02, FEAT-09 and FEAT-10, once phases 0–4 are done. Then FEAT-05, FEAT-07 and FEAT-01 (chosen 2026-11-22), then FEAT-03, FEAT-06 and FEAT-14 (chosen 2026-11-25). The rest aren't prioritised yet. Before starting any feature, add acceptance criteria to it.
 
 ### Small to medium
 - [x] **FEAT-01: User settings for time zone and week start** · `M` · ⭐ next up. Detect the time zone on first login and store it on the user. Add a week-start setting under Settings (default Monday), used by both the API and the grid. This is the long-term fix for BUG-02 and BUG-04.
@@ -224,7 +224,14 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-01, FEAT-02, F
     - Each task in the day view has a "Move" menu with "Today" (unless it is already on today), "Tomorrow" (unless it is already on tomorrow) and "Pick a date…", which opens a date input. All of them work by keyboard and on touch.
     - After a move, the task leaves the day it was on straight away, a toast says where it went ("Moved to Tue, Nov 24"), and the target day shows it in every view.
     - In the week view (FEAT-10), a task can be dragged onto another day.
-- [ ] **FEAT-03: Natural-language quick add** · `M`. e.g. "Call Bob tomorrow !high" parses the date and priority.
+- [ ] **FEAT-03: Natural-language quick add** · `M` · ⭐ next up. e.g. "Call Bob tomorrow !high" parses the date and priority.
+  - Done when:
+    - A "Quick add" button in the calendar header, and `q` in any view, open a one-line Quick add dialog. Without a date in the text, the task goes on the open day in the day view, and on today elsewhere.
+    - The text is parsed on the server (`GET /api/tasks/parse?text=`, spec decision D9) into a description, an optional date and an optional priority. The dialog previews them as you type ("Wed, Nov 26 · High"), and adding sends the parsed task to `POST /tasks`, so creating and validating a task is unchanged.
+    - Dates: `today`, `tomorrow` (`tmr`, `tmrw`), a weekday name (`friday`: the next one after today), `next week` (the first day of next week, from the user's week start), `next month` (its 1st), `in N days/weeks/months` (`in a week`), `Dec 3`, `3 Dec`, `December 3rd` and `Dec 3 2027` (without a year: this year, or next year once the date has passed) and `2026-12-03`. Weekday names and dates may follow `on`. Priority: `!low`, `!medium` (`!med`), `!high`, `!urgent`. Case doesn't matter, and "today" is the user's (`UserClock`).
+    - The matched words are removed from the description. When a kind appears twice, the last one wins and the earlier stays in the text. Text in double quotes is never parsed, so `"Monday" standup` keeps its word. A date that doesn't exist (`Feb 30`) is left as text.
+    - Without a priority the task is Medium. Text that leaves no description can't be added ("Add a description"). After adding, the dialog closes and a toast says where the task went ("Added to Wed, Nov 26") with an "Open" action, and the task shows in every view.
+    - Feature tests cover every phrase, the time zone and week start, "last wins", quoting, impossible dates, validation and guests.
 - [ ] **FEAT-04: Optional time and duration on tasks** · `M`. Optional due time or time block, with "all day" as the default. This conflicts with a spec non-goal, so it needs a scope decision.
 - [x] **FEAT-05: Sort, filter and hide completed** · `S` · ⭐ next up. Sort by priority or status in the day view, and a "hide completed" toggle.
   - Done when:
@@ -233,7 +240,13 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-01, FEAT-02, F
     - Hidden finished tasks are counted under the list ("2 completed hidden · Show"). If every task is finished and hidden, the list says so instead of showing the empty-day state. The progress bar always counts every task.
     - Tasks can only be dragged to reorder in "My order". With completed tasks hidden, the visible tasks are reordered among themselves and the hidden ones keep their places.
     - It works by keyboard and on touch, and nothing changes on the server.
-- [ ] **FEAT-06: Search** · `M`. Search across all tasks and notes, and jump to the day.
+- [ ] **FEAT-06: Search** · `M` · ⭐ next up. Search across all tasks and notes, and jump to the day.
+  - Done when:
+    - A search button in the calendar header, and `/` in any view, open a search dialog. Typing at least 2 characters searches the user's task descriptions and day notes (`GET /api/search?q=`), shortly after typing stops. Case doesn't matter, and `%` and `_` match themselves.
+    - Results are grouped by day: today and later days first, soonest first, then earlier days, most recent first (spec decision D10), at most 25 days of each. When there are more, the list says so. Each day shows its date, its matching tasks (with priority, and struck through when finished) and, when the note matches, the part of the note around the match. The matched text is highlighted.
+    - Choosing a result opens that day, and its back button returns to the calendar view the search was opened from (in the day view, it pages to that day). The results work by keyboard: `↓` from the field, `↑`/`↓` between results, Enter to open.
+    - Nothing found says so. Only the user's own tasks and notes are searched. A `q` shorter than 2 or longer than 100 characters is a 422.
+    - Feature tests cover tasks, notes, case, literal wildcards, the order and limit of both groups, other users' data and validation.
 - [x] **FEAT-07: Keyboard shortcuts** · `S` · ⭐ next up. `n` new task, `t` today, `←/→` month or day, `Esc` back to the month view, `?` help.
   - Done when:
     - `n` opens the Add Task dialog: for the open day in the day view, or for today in a calendar view.
@@ -261,7 +274,14 @@ Current CI state (checked 2026-11-22, after Phases 0–4 and FEAT-01, FEAT-02, F
 - [ ] **FEAT-11: Subtasks / checklists** · `M`
 - [ ] **FEAT-12: Tags, labels or projects with colours** · `M`
 - [ ] **FEAT-13: Rich-text or markdown notes, and a daily journal template** · `M`
-- [ ] **FEAT-14: Stats and streaks** · `M`. Completion rate per day, week or month, a streak counter, and a heatmap.
+- [ ] **FEAT-14: Stats and streaks** · `M` · ⭐ next up. Completion rate per day, week or month, a streak counter, and a heatmap.
+  - Done when:
+    - A Stats page (`/stats`), linked from the sidebar, shows the current and longest streak, how many of today's, this week's and this month's tasks are done, a heatmap of the last year, and the completion rate of each of the last 12 weeks or months (switchable).
+    - Only days up to today count (the user's "today", `UserClock`). A day's completion is its finished tasks out of all its tasks.
+    - The streak counts days in a row on which at least one task was finished (spec decision D11). A day without a finished task ends it, except today, which can still be finished, so the current streak runs to today or yesterday. The longest streak is the longest such run ever.
+    - The heatmap has a column per week, from the user's week start, and a cell per day, shaded by completion (no tasks, none done, under half, half or more, all). Each cell says what it shows ("Tue, Nov 24: 3 of 4 done") and opens that day. Weeks and months follow the user's week start.
+    - It works at phone width (the heatmap scrolls sideways and starts at the latest week) and in both themes, and colour isn't the only way the numbers are shown.
+    - Feature tests cover the counts, the streak rules (today, gaps, longest), future days, the time zone, the week start and other users' data.
 - [ ] **FEAT-15: Reminders and notifications** · `L`. A morning email digest of today's plan, or web push. Needs queues and a scheduler in production.
 - [ ] **FEAT-16: External calendar integration** · `L`. A read-only iCal feed export first, then possibly Google or Outlook sync.
 - [ ] **FEAT-17: PWA and offline support** · `L`. Installable app with offline caching and queued mutations.

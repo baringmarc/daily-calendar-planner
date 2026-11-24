@@ -340,6 +340,9 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 | D6 | Recurring tasks are stored as a rule plus **real task rows**, created when the calendar is read, from today up to the end of the range read (at most a year ahead). Past days are not backfilled. | Every task action works on occurrences unchanged. A rule keeps a watermark, so a deleted or moved occurrence isn't created again (FEAT-09). |
 | D7 | Unfinished occurrences of a recurring task are **not** offered for carry-over. | A missed repeat comes back by itself, so a week away doesn't fill the prompt with copies of it (FEAT-09). |
 | D8 | A user's **stored time zone** decides "today", on the server and in the browser. It is detected once from the browser and can be changed under Settings. | The browser's own zone is only used until one is stored, so a device set to another zone (travelling, a work laptop) doesn't move "today" (FEAT-01). |
+| D9 | Quick-add text is **parsed on the server**, which returns the description, date and priority, and the task is then created through the usual `POST /tasks`. | One parser, covered by PHPUnit, uses the same "today" and week start as everything else. The dialog's preview costs a request while typing (FEAT-03). |
+| D10 | Search results list **today and later days first** (soonest first), then earlier days (most recent first). | What's coming up is found first, and repeating tasks' future occurrences don't push past matches out of reach, because each group has its own limit (FEAT-06). |
+| D11 | A **streak** counts days in a row with at least one finished task. Today doesn't end it while it can still be finished. | A day off with nothing planned ends a streak, as in other streak counters. "Every task finished" was rejected because carry-over and unplanned days make it hard to follow (FEAT-14). |
 
 ### Open questions
 

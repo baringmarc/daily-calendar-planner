@@ -100,6 +100,13 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 - Occurrences are created when the calendar is read, from today up to the end of the range read, at most a year ahead. Past days are never backfilled. Each rule remembers how far it has been generated, so a deleted or moved occurrence isn't created again.
 - Editing a repeating task applies to that task only, or to it and the following occurrences. Changing the rule restarts it from that task and replaces the unfinished occurrences after it. Choosing "Doesn't repeat" stops the series after that task: later unfinished occurrences are deleted, and the rest become one-off tasks. Occurrences on days before today are history and never change.
 
+### 3.7 Quick add
+- One line of text adds a task with its date and priority, e.g. "Call Bob tomorrow !high" ([decision D9](#9-decisions-and-open-questions)). The server parses it (`App\Support\QuickAddParser`), and the task is then added like any other.
+- Dates, relative to the user's today: `today`; `tomorrow`, `tmr`, `tmrw`; a weekday name (the next one after today, so "friday" on a Friday is a week away); `next week` (the first day of next week, from the user's week start); `next month` (its 1st); `in N days|weeks|months` (`in a week`; a month later stays in a shorter month); `Dec 3`, `December 3rd`, `3 Dec`, `the 3rd of December`, with an optional year (`Dec 3, 2027`), and without one this year, or next year once the date has passed; and `2026-12-03`. Weekday names and dates may follow `on`.
+- Priority: `!low`, `!medium` or `!med`, `!high`, `!urgent`. Without one the task is Medium.
+- Case doesn't matter, and only whole words match ("Todays", "follow-up-tomorrow" and "wow!high" stay text). The last date phrase and the last priority win and are removed from the description; earlier ones stay. Text in double quotes is never parsed, and a date that doesn't exist (`Feb 30`) stays text.
+- Without a date the task goes on the open day in the day view, and on today elsewhere. Text that leaves no description can't be added.
+
 ---
 
 ## 4. Functional requirements
@@ -160,6 +167,7 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 | FR-T7 | Failed actions show a visible error (a toast, or the message next to the field for a 422) and leave the UI consistent with the server. | ✅ |
 | FR-T8 | Move a task to another date from its Move menu: Today, Tomorrow, or a picked date. It leaves its day at once and goes to the end of the new day's list. | ✅ |
 | FR-T9 | A task can repeat ([3.6](#36-recurring-tasks)). Repeating tasks show their rule ("Every weekday"), and editing one asks whether the change applies to the following occurrences too. | ✅ |
+| FR-T10 | Quick add ([3.7](#37-quick-add)): a "Quick add" button in the calendar header, or `q` in any view, opens a one-line dialog that previews the date and priority read from the text as you type. Adding closes it and shows a toast saying where the task went ("Added to Wed, Nov 26"), with an "Open" action. | ✅ |
 
 ### 4.5 Carry-over
 
@@ -175,9 +183,26 @@ Workflow: work happens on `develop`. PRs merge into `master`.
 
 | ID | Requirement | Status |
 |---|---|---|
-| FR-K1 | `n` opens Add Task (for the open day, or for today from a calendar view), `t` opens today, `←`/`→` page the month, week or day, `m`/`w`/`a` switch views, `Esc` goes back from a day to its calendar view, and `?` lists the shortcuts. The calendar header has a button for the list too, hidden on touch screens. | ✅ |
+| FR-K1 | `n` opens Add Task (for the open day, or for today from a calendar view), `q` opens Quick add, `/` opens search, `t` opens today, `←`/`→` page the month, week or day, `m`/`w`/`a` switch views, `Esc` goes back from a day to its calendar view, and `?` lists the shortcuts. The calendar header has a button for the list too, hidden on touch screens. | ✅ |
 | FR-K2 | Paging day to day replaces the history entry, so back still returns to the calendar view. | ✅ |
 | FR-K3 | Shortcuts are ignored while typing in a field, while a dialog or menu is open, during a keyboard drag, and with Ctrl, Cmd or Alt held. | ✅ |
+
+### 4.7 Search
+
+| ID | Requirement | Status |
+|---|---|---|
+| FR-S1 | A search button in the calendar header, or `/` in any view, opens a search dialog. From 2 characters it searches the user's task descriptions and day notes, shortly after typing stops. Case doesn't matter, and `%` and `_` match themselves. | ✅ |
+| FR-S2 | Results are grouped by day: today and later first (soonest first), then earlier days (most recent first), at most 25 days each, with a line saying when more match ([decision D10](#9-decisions-and-open-questions)). A day shows its matching tasks (priority, struck through when finished) and the part of its note around the match, if the note matches, with the matched text highlighted. | ✅ |
+| FR-S3 | Choosing a day opens it over the calendar view the search was opened from, or pages the open day view to it. `↓` moves from the field to the results, `↑`/`↓` between them, and Enter opens one (Enter in the field opens the first). Nothing found says so. | ✅ |
+
+### 4.8 Stats
+
+| ID | Requirement | Status |
+|---|---|---|
+| FR-ST1 | A Stats page (`/stats`, linked from the sidebar) shows the current and longest streak, and how many of today's, this week's and this month's tasks are done. Only days up to the user's today count, and weeks start on the user's week start. | ✅ |
+| FR-ST2 | A streak counts days in a row with at least one finished task ([decision D11](#9-decisions-and-open-questions)). Today doesn't end it while it can still be finished, so the current streak runs back from today, or from yesterday. The longest streak is the longest run ever. | ✅ |
+| FR-ST3 | A chart shows the completion rate (finished out of all tasks) of each of the last 12 weeks or months, switchable, with the numbers also given as text. | ✅ |
+| FR-ST4 | A heatmap shows the last year, a column per week and a cell per day, shaded by completion: no tasks, none done (outlined), under half, half or more, all done, with a legend naming each. Every cell is labelled ("Tue, Nov 24, 2026: 3 of 4 done") and opens that day. On phones it scrolls sideways, starting at the latest week. | ✅ |
 
 ## 5. Data model
 
@@ -289,6 +314,20 @@ Body: `{ description, priority, recurrence: {...} | null }`, all required (`recu
 #### `PUT /api/tasks/reorder`
 Body: `{ tasks: [{ id }, ...] }` (at least one, no duplicates), all from the same calendar day and in the new order. Rewrites `order` as `1..n` in one query. **200**. **403** if any task isn't the user's, **422** for an invalid body, an unknown id, or tasks from more than one day (`ReorderTasksRequest`).
 
+#### `GET /api/search?q=`
+Searches the user's task descriptions and day notes for `q` (2–100 characters, **422** otherwise), case-insensitively and with `%` and `_` matched literally (`SearchService`).
+
+```json
+{
+  "upcoming": { "days": [{ "date": "2026-11-26", "note": null, "tasks": [Task] }], "has_more": false },
+  "earlier":  { "days": [], "has_more": false }
+}
+```
+`upcoming` is today (the user's) and later, soonest first. `earlier` is the days before, most recent first. Each lists at most 25 days, and `has_more` says more matched. A day has only its matching tasks, and its `note` only when the note matches (null otherwise). The frontend type is `SearchResults`.
+
+#### `GET /api/tasks/parse?text=`
+Reads a quick-add line ([3.7](#37-quick-add)) and saves nothing. `text` is required, up to 500 characters (**422** otherwise). **200** with `{ description: string, date: YYYY-MM-DD | null, priority: 0–3 | null }`. `description` can be empty, and is checked when the task is added with `POST /tasks`.
+
 #### `GET /api/tasks/unfinished`
 Returns `{ unfinishedTasks: { [date]: Task[] } }`: the user's unfinished tasks on days strictly before today (in the user's time zone), from any month, leaving out recurring occurrences. Dates are oldest first, and tasks within a date follow `order`. An empty result is `{}`.
 
@@ -299,10 +338,13 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 
 ## 7. Frontend architecture
 
+- **Stats** (`/stats`, FEAT-14) is a separate Inertia page whose `stats` prop comes straight from `StatsService` (one grouped query of task counts per day, then streaks, periods and the heatmap in PHP). It isn't part of the cached calendar data, so it's always fresh when opened.
 - **Single page.** `HomeController@index` renders the `home` Inertia page with the props `weekStartsOn`, `month`, `day`, `view` and `week` (from the query string: null when absent or invalid, and `view` falls back to `month`). After that, all data goes through the JSON API above.
 - [resources/js/pages/home.tsx](resources/js/pages/home.tsx) reads the view, the visible month or week and the selected day from the URL props, changes them with Inertia's client-side `router.push`/`replace`, and shows `CalendarHeader` over the month grid (`MonthGrid` of `DayCell`s), `WeekView` or `AgendaView`, or the `DayView`. Every view reads the month's cached query: a week is always inside the grid of the month it starts in.
 - **Data layer: TanStack Query** ([decision D5](#9-decisions-and-open-questions)). [resources/js/lib/calendar-api.ts](resources/js/lib/calendar-api.ts) holds the query keys and one axios function per endpoint. Each month's `CalendarData` is its own query (`['calendar', 'yyyy-MM']`), cached and refetched in the background when shown again or when the window regains focus.
 - [resources/js/hooks/use-calendar.ts](resources/js/hooks/use-calendar.ts) reads the visible month's query, fetches the carry-over candidates from `GET /api/tasks/unfinished` whenever the month view is shown, and carries tasks over (then invalidates every cached month).
+- [resources/js/components/search-dialog.tsx](resources/js/components/search-dialog.tsx) searches (`['search', term]`, debounced) and highlights matches. It reads the server, not the cached months, so it finds any date.
+- [resources/js/components/quick-add-dialog.tsx](resources/js/components/quick-add-dialog.tsx) previews the parse of the text (debounced, `['tasks', 'parse', text]`), and on submit parses the exact text (usually cached), adds the task with `POST /tasks`, and invalidates every cached month.
 - [resources/js/components/day-panel-content.tsx](resources/js/components/day-panel-content.tsx) renders a day: tasks (dnd-kit sortable), add/edit dialogs and the note.
 - [resources/js/hooks/useTaskActions.ts](resources/js/hooks/useTaskActions.ts) runs the per-day mutations (`useMutation`) and, once the server confirms, patches the visible month's cached query through `updateData(prev => next)`. It does not fetch again. Reordering is optimistic, and deletes wait out an undo toast first. The note autosaves through [use-note-autosave.ts](resources/js/hooks/use-note-autosave.ts).
 - **Errors:** [resources/js/lib/query-client.ts](resources/js/lib/query-client.ts) shows a toast for any failed query or mutation (titled by its `meta.errorMessage`) and refetches the calendar after a failed mutation. The task dialog shows 422 messages next to its fields.
@@ -340,6 +382,9 @@ Body: `{ task_ids: number[] }` (at least one). The server resolves "today" itsel
 | D6 | Recurring tasks are stored as a rule plus **real task rows**, created when the calendar is read, from today up to the end of the range read (at most a year ahead). Past days are not backfilled. | Every task action works on occurrences unchanged. A rule keeps a watermark, so a deleted or moved occurrence isn't created again (FEAT-09). |
 | D7 | Unfinished occurrences of a recurring task are **not** offered for carry-over. | A missed repeat comes back by itself, so a week away doesn't fill the prompt with copies of it (FEAT-09). |
 | D8 | A user's **stored time zone** decides "today", on the server and in the browser. It is detected once from the browser and can be changed under Settings. | The browser's own zone is only used until one is stored, so a device set to another zone (travelling, a work laptop) doesn't move "today" (FEAT-01). |
+| D9 | Quick-add text is **parsed on the server**, which returns the description, date and priority, and the task is then created through the usual `POST /tasks`. | One parser, covered by PHPUnit, uses the same "today" and week start as everything else. The dialog's preview costs a request while typing (FEAT-03). |
+| D10 | Search results list **today and later days first** (soonest first), then earlier days (most recent first). | What's coming up is found first, and repeating tasks' future occurrences don't push past matches out of reach, because each group has its own limit (FEAT-06). |
+| D11 | A **streak** counts days in a row with at least one finished task. Today doesn't end it while it can still be finished. | A day off with nothing planned ends a streak, as in other streak counters. "Every task finished" was rejected because carry-over and unplanned days make it hard to follow (FEAT-14). |
 
 ### Open questions
 

@@ -24,6 +24,8 @@ import { CalendarHeader } from '@/components/calendar-header';
 import { DayView } from '@/components/day-view';
 import { KeyboardShortcutsDialog } from '@/components/keyboard-shortcuts-dialog';
 import { MonthGrid } from '@/components/month-grid';
+import { QuickAddDialog } from '@/components/quick-add-dialog';
+import { SearchDialog } from '@/components/search-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { UnfinishedTasksDialog } from '@/components/unfinished-tasks-dialog';
 import { WeekView } from '@/components/week-view';
@@ -261,9 +263,25 @@ export default function Home({
     const [addTaskRequested, setAddTaskRequested] = useState(false);
     const showShortcuts = () => setIsShortcutsOpen(true);
 
+    // Opens a day found by quick add or search: over the calendar view on
+    // screen, or in place of the open day.
+    const goToDay = (date: Date) =>
+        selectedDay ? showDayInDayView(date) : openDay(date);
+
+    // Quick add (FEAT-03). A task without a date in its text goes on the
+    // open day, or on today in a calendar view.
+    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+    const showQuickAdd = () => setIsQuickAddOpen(true);
+
+    // Search (FEAT-06).
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const showSearch = () => setIsSearchOpen(true);
+
     const shortcuts: ShortcutHandlers = selectedDay
         ? {
               n: () => setAddTaskRequested(true),
+              q: showQuickAdd,
+              '/': showSearch,
               t: () => showDayInDayView(today()),
               ArrowLeft: () => showDayInDayView(addDays(selectedDay, -1)),
               ArrowRight: () => showDayInDayView(addDays(selectedDay, 1)),
@@ -275,6 +293,8 @@ export default function Home({
                   setAddTaskRequested(true);
                   openToday();
               },
+              q: showQuickAdd,
+              '/': showSearch,
               t: openToday,
               ArrowLeft: showPrev,
               ArrowRight: showNext,
@@ -328,6 +348,17 @@ export default function Home({
                 open={isShortcutsOpen}
                 onOpenChange={setIsShortcutsOpen}
             />
+            <QuickAddDialog
+                open={isQuickAddOpen}
+                onOpenChange={setIsQuickAddOpen}
+                defaultDate={selectedDay ?? today()}
+                onOpenDay={goToDay}
+            />
+            <SearchDialog
+                open={isSearchOpen}
+                onOpenChange={setIsSearchOpen}
+                onOpenDay={goToDay}
+            />
             <AnimatePresence mode="wait">
                 {!selectedDay ? (
                     <div
@@ -349,6 +380,8 @@ export default function Home({
                                 onPrev={showPrev}
                                 onNext={showNext}
                                 onToday={openToday}
+                                onQuickAdd={showQuickAdd}
+                                onSearch={showSearch}
                                 onShowShortcuts={showShortcuts}
                                 onMonthSelect={(m) =>
                                     showMonth(setMonth(monthStart, m))

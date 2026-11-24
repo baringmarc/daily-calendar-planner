@@ -1,12 +1,14 @@
 import axios from 'axios';
 import CalendarDayController from '@/actions/App/Http/Controllers/CalendarDayController';
 import HomeController from '@/actions/App/Http/Controllers/HomeController';
+import SearchController from '@/actions/App/Http/Controllers/SearchController';
 import TaskController from '@/actions/App/Http/Controllers/TaskController';
 import type { Priority } from '@/constants/priority';
 import type {
     CalendarData,
     CalendarDay,
     Recurrence,
+    SearchResults,
     Task,
     UnfinishedTasks,
 } from '@/types';
@@ -19,6 +21,8 @@ export const queryKeys = {
     calendar: ['calendar'] as const,
     calendarMonth: (month: string) => ['calendar', month] as const,
     unfinishedTasks: ['tasks', 'unfinished'] as const,
+    parsedTask: (text: string) => ['tasks', 'parse', text] as const,
+    search: (term: string) => ['search', term] as const,
 };
 
 // --- Queries ---
@@ -36,6 +40,31 @@ export async function fetchUnfinishedTasks(): Promise<UnfinishedTasks> {
     const res = await axios.get(TaskController.unfinished.url());
 
     return res.data.unfinishedTasks ?? {};
+}
+
+/** Tasks and notes containing `term` (at least 2 characters). */
+export async function searchTasksAndNotes(
+    term: string,
+): Promise<SearchResults> {
+    const res = await axios.get(SearchController.url({ query: { q: term } }));
+
+    return res.data;
+}
+
+/**
+ * A quick-add line read on the server (FEAT-03): the description without
+ * the date and priority words, and those, or null when there are none.
+ */
+export type ParsedTask = {
+    description: string;
+    date: string | null;
+    priority: Priority | null;
+};
+
+export async function parseTask(text: string): Promise<ParsedTask> {
+    const res = await axios.get(TaskController.parse.url({ query: { text } }));
+
+    return res.data;
 }
 
 // --- Mutations ---
